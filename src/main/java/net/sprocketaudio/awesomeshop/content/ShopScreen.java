@@ -39,6 +39,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         this.topPos = PADDING;
         this.leftPos = (this.width - this.imageWidth) / 2;
         clearWidgets();
+        purchaseButtons.clear();
 
         int x = leftPos + PADDING;
         int y = topPos + 80;
