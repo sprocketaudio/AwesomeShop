@@ -3,6 +3,7 @@ package net.sprocketaudio.awesomeshop.content;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.IntSupplier;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -26,6 +27,8 @@ public class ShopMenu extends AbstractContainerMenu {
 
     private int currencyCount;
 
+    private final IntSupplier offerCountLookup;
+
     public ShopMenu(int id, Inventory inventory, RegistryFriendlyByteBuf data) {
         this(id, inventory, readShopFromClient(inventory.player.level(), data), readCurrency(data), readOffers(data));
     }
@@ -40,6 +43,7 @@ public class ShopMenu extends AbstractContainerMenu {
         this.offers = List.copyOf(offers);
         this.currencyItem = currencyItem;
         this.access = shop == null ? ContainerLevelAccess.NULL : ContainerLevelAccess.create(shop.getLevel(), shop.getBlockPos());
+        this.offerCountLookup = () -> this.offers.size();
 
         addDataSlot(new DataSlot() {
             @Override
@@ -89,23 +93,34 @@ public class ShopMenu extends AbstractContainerMenu {
         return currencyCount;
     }
 
+    public int getPriceForOffer(ItemStack offer) {
+        return Config.getOfferPrice(offer);
+    }
+
     @Override
     public boolean clickMenuButton(Player player, int id) {
-        if (shop == null || id < 0 || id >= offers.size()) {
+        int offerSize = offerCountLookup.getAsInt();
+        if (shop == null || offerSize <= 0 || id < 0) {
             return false;
         }
 
-        ItemStack offer = offers.get(id);
+        int quantity = id / offerSize;
+        int offerIndex = id % offerSize;
+        if (offerIndex >= offers.size() || quantity <= 0) {
+            return false;
+        }
+
+        ItemStack offer = offers.get(offerIndex);
         if (offer.isEmpty()) {
             return false;
         }
 
-        ItemStack delivery = offer.copy();
-        boolean success = shop.tryPurchase(delivery, player);
+        boolean success = shop.tryPurchase(offer, quantity, player);
         if (success) {
-            player.displayClientMessage(Config.purchaseSuccessMessage(offer), true);
+            player.displayClientMessage(Config.purchaseSuccessMessage(offer, quantity), true);
         } else {
-            player.displayClientMessage(Config.purchaseFailureMessage(offer, shop.getCurrencyItem()), true);
+            int totalCost = Config.getOfferPrice(offer) * quantity;
+            player.displayClientMessage(Config.purchaseFailureMessage(offer, shop.getCurrencyItem(), totalCost), true);
         }
         return true;
     }

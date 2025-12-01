@@ -54,15 +54,19 @@ public class Config {
                 .collect(Collectors.toList());
     }
 
+    public static int getOfferPrice(ItemStack offer) {
+        return 1;
+    }
+
     public static Component offerSummaryMessage(ItemStack offer, Item currency) {
         return Component.translatable("block.awesomeshop.shop_block.offer", offer.getHoverName(), Component.translatable(currency.getDescriptionId()));
     }
 
-    public static Component purchaseSuccessMessage(ItemStack offer) {
-        return Component.translatable("block.awesomeshop.shop_block.purchase", offer.getHoverName());
+    public static Component purchaseSuccessMessage(ItemStack offer, int quantity) {
+        return Component.translatable("block.awesomeshop.shop_block.purchase", offer.getHoverName(), quantity);
     }
 
-    public static Component purchaseFailureMessage(ItemStack offer, Item currency) {
-        return Component.translatable("block.awesomeshop.shop_block.failed", offer.getHoverName(), Component.translatable(currency.getDescriptionId()));
+    public static Component purchaseFailureMessage(ItemStack offer, Item currency, int totalCost) {
+        return Component.translatable("block.awesomeshop.shop_block.failed", offer.getHoverName(), Component.translatable(currency.getDescriptionId()), totalCost);
     }
 }

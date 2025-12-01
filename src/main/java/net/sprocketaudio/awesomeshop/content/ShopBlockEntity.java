@@ -31,19 +31,24 @@ public class ShopBlockEntity extends BlockEntity implements WorldlyContainer, Me
         super(AwesomeShop.SHOP_BLOCK_ENTITY.get(), pos, state);
     }
 
-    public boolean tryPurchase(ItemStack offer, Player player) {
-        if (level == null || level.isClientSide) {
+    public boolean tryPurchase(ItemStack offer, int quantity, Player player) {
+        if (level == null || level.isClientSide || quantity <= 0) {
             return false;
         }
 
         Item currency = Config.getCurrencyItem();
-        if (currencyCount <= 0) {
+        int price = Config.getOfferPrice(offer);
+        int totalCost = price * quantity;
+        if (totalCost <= 0 || currencyCount < totalCost) {
             return false;
         }
 
-        currencyCount -= 1;
-        if (!player.addItem(offer)) {
-            player.drop(offer, false);
+        currencyCount -= totalCost;
+        ItemStack delivery = offer.copy();
+        delivery.setCount(offer.getCount() * quantity);
+        boolean fullyAdded = player.addItem(delivery);
+        if (!fullyAdded && !delivery.isEmpty()) {
+            player.drop(delivery, false);
         }
         setChanged();
         return true;
