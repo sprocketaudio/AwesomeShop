@@ -158,8 +158,8 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
         Component currencyName = Component.translatable(menu.getCurrencyItem().getDescriptionId());
         Component currencyLine = Component.translatable("screen.awesomeshop.shop_block.currency", menu.getCurrencyCount(), currencyName);
-        int centerX = leftPos + (imageWidth / 2);
-        int titleY = topPos + PADDING;
+        int centerX = imageWidth / 2;
+        int titleY = PADDING;
         int currencyY = titleY + font.lineHeight + 4;
         graphics.drawCenteredString(font, title, centerX, titleY, 0xFFFFFF);
         graphics.drawCenteredString(font, currencyLine, centerX, currencyY, 0xFFFFFF);
