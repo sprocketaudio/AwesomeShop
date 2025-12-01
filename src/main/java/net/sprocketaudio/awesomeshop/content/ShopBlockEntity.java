@@ -47,14 +47,23 @@ public class ShopBlockEntity extends BlockEntity implements WorldlyContainer, Me
             return false;
         }
 
-        Map<ResourceLocation, Integer> updatedCounts = new HashMap<>();
+        Map<ResourceLocation, Integer> requiredTotals = new HashMap<>();
         for (Config.PriceRequirement requirement : offer.prices()) {
             int requiredTotal = requirement.price() * quantity;
-            int available = getCurrencyCount(requirement.currency());
-            if (requiredTotal <= 0 || available < requiredTotal) {
+            if (requiredTotal <= 0) {
                 return false;
             }
-            updatedCounts.put(requirement.currency().id(), available - requiredTotal);
+            requiredTotals.merge(requirement.currency().id(), requiredTotal, Integer::sum);
+        }
+
+        Map<ResourceLocation, Integer> updatedCounts = new HashMap<>();
+        for (Map.Entry<ResourceLocation, Integer> entry : requiredTotals.entrySet()) {
+            int available = getCurrencyCount(entry.getKey());
+            int requiredTotal = entry.getValue();
+            if (available < requiredTotal) {
+                return false;
+            }
+            updatedCounts.put(entry.getKey(), available - requiredTotal);
         }
 
         updatedCounts.forEach(this::setCurrencyCount);
