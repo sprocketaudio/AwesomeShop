@@ -6,7 +6,7 @@
   "block.awesomeshop.shop_block.failed": "This shop needs %3$s x %2$s to buy %1$s.",
   "screen.awesomeshop.shop_block.buy": "Buy %2$s x %1$s",
   "screen.awesomeshop.shop_block.currency": "Stored currency: %1$s x %2$s",
-  "screen.awesomeshop.shop_block.price_each": "Price: %1$s x %2$s each",
-  "screen.awesomeshop.shop_block.total_price": "Final: %1$s x %2$s",
+  "screen.awesomeshop.shop_block.price_each": "Price: %1$s each",
+  "screen.awesomeshop.shop_block.total_price": "Total: %1$s",
   "screen.awesomeshop.shop_block.quantity": "Selected: %1$s"
 }
