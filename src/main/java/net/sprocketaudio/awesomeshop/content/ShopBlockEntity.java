@@ -212,7 +212,11 @@ public class ShopBlockEntity extends BlockEntity implements WorldlyContainer, Me
 
     @Override
     public boolean canPlaceItem(int index, ItemStack stack) {
-        return false;
+        List<ConfiguredCurrency> currencies = Config.getConfiguredCurrencies();
+        if (index < 0 || index >= currencies.size()) {
+            return false;
+        }
+        return stack.is(currencies.get(index).item());
     }
 
     @Override
