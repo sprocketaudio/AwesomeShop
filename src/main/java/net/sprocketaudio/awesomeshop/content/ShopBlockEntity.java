@@ -1,8 +1,8 @@
 package net.sprocketaudio.awesomeshop.content;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.Containers;
@@ -12,30 +12,20 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.items.ItemStackHandler;
 import net.sprocketaudio.awesomeshop.AwesomeShop;
 import net.sprocketaudio.awesomeshop.Config;
 
-public class ShopBlockEntity extends BlockEntity implements WorldlyContainer {
-    private static final String SLOT_TAG = "Currency";
-    private static final String OFFER_TAG = "OfferIndex";
+import net.minecraft.network.chat.Component;
+
+public class ShopBlockEntity extends BlockEntity implements WorldlyContainer, MenuProvider {
+    private static final String CURRENCY_COUNT_TAG = "CurrencyCount";
     private static final int[] SLOTS = new int[] { 0 };
 
-    private final ItemStackHandler currencySlot = new ItemStackHandler(1) {
-        @Override
-        protected void onContentsChanged(int slot) {
-            setChanged();
-        }
-
-        @Override
-        public boolean isItemValid(int slot, ItemStack stack) {
-            return stack.is(Config.getCurrencyItem());
-        }
-    };
-
-    private int offerIndex = 0;
+    private int currencyCount = 0;
 
     public ShopBlockEntity(BlockPos pos, BlockState state) {
         super(AwesomeShop.SHOP_BLOCK_ENTITY.get(), pos, state);
@@ -47,12 +37,11 @@ public class ShopBlockEntity extends BlockEntity implements WorldlyContainer {
         }
 
         Item currency = Config.getCurrencyItem();
-        ItemStack stored = currencySlot.getStackInSlot(0);
-        if (!stored.is(currency) || stored.isEmpty()) {
+        if (currencyCount <= 0) {
             return false;
         }
 
-        currencySlot.extractItem(0, 1, false);
+        currencyCount -= 1;
         if (!player.addItem(offer)) {
             player.drop(offer, false);
         }
@@ -60,51 +49,48 @@ public class ShopBlockEntity extends BlockEntity implements WorldlyContainer {
         return true;
     }
 
-    public int cycleOffer(int offerCount) {
-        if (offerCount <= 0) {
-            offerIndex = 0;
-            return offerIndex;
-        }
-        offerIndex = (offerIndex + 1) % offerCount;
-        setChanged();
-        return offerIndex;
-    }
-
-    public int getOfferIndex(int offerCount) {
-        if (offerCount <= 0) {
-            offerIndex = 0;
-        } else if (offerIndex >= offerCount) {
-            offerIndex = 0;
-        }
-        return offerIndex;
-    }
-
     public void dropCurrency(Level level, BlockPos pos) {
-        SimpleContainer container = new SimpleContainer(currencySlot.getSlots());
-        for (int i = 0; i < currencySlot.getSlots(); i++) {
-            container.setItem(i, currencySlot.getStackInSlot(i));
+        SimpleContainer container = new SimpleContainer(1);
+        Item currency = Config.getCurrencyItem();
+        int remaining = currencyCount;
+        while (remaining > 0) {
+            int dropAmount = Math.min(remaining, currency.getDefaultMaxStackSize());
+            container.setItem(0, new ItemStack(currency, dropAmount));
+            Containers.dropContents(level, pos, container);
+            remaining -= dropAmount;
         }
-        Containers.dropContents(level, pos, container);
+        currencyCount = 0;
     }
 
     public ResourceLocation getCurrencyId() {
         return Config.getCurrencyLocation();
     }
 
+    public Item getCurrencyItem() {
+        return Config.getCurrencyItem();
+    }
+
+    public int getCurrencyCount() {
+        return currencyCount;
+    }
+
+    private void addCurrency(int count) {
+        if (count > 0) {
+            currencyCount += count;
+            setChanged();
+        }
+    }
+
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider provider) {
         super.saveAdditional(tag, provider);
-        tag.put(SLOT_TAG, currencySlot.serializeNBT(provider));
-        tag.putInt(OFFER_TAG, offerIndex);
+        tag.putInt(CURRENCY_COUNT_TAG, currencyCount);
     }
 
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider provider) {
         super.loadAdditional(tag, provider);
-        if (tag.contains(SLOT_TAG)) {
-            currencySlot.deserializeNBT(provider, tag.getCompound(SLOT_TAG));
-        }
-        offerIndex = tag.getInt(OFFER_TAG);
+        currencyCount = tag.getInt(CURRENCY_COUNT_TAG);
     }
 
     // WorldlyContainer implementation
@@ -120,50 +106,38 @@ public class ShopBlockEntity extends BlockEntity implements WorldlyContainer {
 
     @Override
     public boolean canTakeItemThroughFace(int index, ItemStack stack, Direction direction) {
-        return index == 0;
+        return false;
     }
 
     @Override
     public int getContainerSize() {
-        return currencySlot.getSlots();
+        return 1;
     }
 
     @Override
     public boolean isEmpty() {
-        for (int i = 0; i < currencySlot.getSlots(); i++) {
-            if (!currencySlot.getStackInSlot(i).isEmpty()) {
-                return false;
-            }
-        }
-        return true;
+        return currencyCount <= 0;
     }
 
     @Override
     public ItemStack getItem(int index) {
-        return currencySlot.getStackInSlot(index);
+        return ItemStack.EMPTY;
     }
 
     @Override
     public ItemStack removeItem(int index, int count) {
-        ItemStack result = currencySlot.extractItem(index, count, false);
-        if (!result.isEmpty()) {
-            setChanged();
-        }
-        return result;
+        return ItemStack.EMPTY;
     }
 
     @Override
     public ItemStack removeItemNoUpdate(int index) {
-        ItemStack stack = currencySlot.getStackInSlot(index);
-        currencySlot.setStackInSlot(index, ItemStack.EMPTY);
-        return stack;
+        return ItemStack.EMPTY;
     }
 
     @Override
     public void setItem(int index, ItemStack stack) {
         if (index == 0 && stack.is(Config.getCurrencyItem())) {
-            currencySlot.setStackInSlot(index, stack);
-            setChanged();
+            addCurrency(stack.getCount());
         }
     }
 
@@ -178,13 +152,21 @@ public class ShopBlockEntity extends BlockEntity implements WorldlyContainer {
 
     @Override
     public void clearContent() {
-        for (int i = 0; i < currencySlot.getSlots(); i++) {
-            currencySlot.setStackInSlot(i, ItemStack.EMPTY);
-        }
+        currencyCount = 0;
     }
 
     @Override
     public boolean canPlaceItem(int index, ItemStack stack) {
         return index == 0 && stack.is(Config.getCurrencyItem());
+    }
+
+    @Override
+    public Component getDisplayName() {
+        return Component.translatable("block.awesomeshop.shop_block");
+    }
+
+    @Override
+    public ShopMenu createMenu(int id, Inventory inventory, Player player) {
+        return new ShopMenu(id, inventory, this, Config.getConfiguredOffers());
     }
 }

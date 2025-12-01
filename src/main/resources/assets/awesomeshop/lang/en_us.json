@@ -3,5 +3,7 @@
   "block.awesomeshop.shop_block.no_offers": "No offers configured for this shop.",
   "block.awesomeshop.shop_block.offer": "Offer: %1$s for 1 %2$s",
   "block.awesomeshop.shop_block.purchase": "You bought %1$s!",
-  "block.awesomeshop.shop_block.failed": "This shop needs 1 %2$s to buy %1$s."
+  "block.awesomeshop.shop_block.failed": "This shop needs 1 %2$s to buy %1$s.",
+  "screen.awesomeshop.shop_block.buy": "Buy %1$s",
+  "screen.awesomeshop.shop_block.currency": "Stored currency: %1$s x %2$s"
 }

@@ -12,6 +12,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
+import net.minecraft.world.inventory.MenuType;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
@@ -25,8 +26,12 @@ import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
+import net.neoforged.neoforge.network.IContainerFactory;
+import net.sprocketaudio.awesomeshop.client.AwesomeShopClient;
 import net.sprocketaudio.awesomeshop.content.ShopBlock;
 import net.sprocketaudio.awesomeshop.content.ShopBlockEntity;
+import net.sprocketaudio.awesomeshop.content.ShopMenu;
 
 // The value here should match an entry in the META-INF/neoforge.mods.toml file
 @Mod(AwesomeShop.MOD_ID)
@@ -39,6 +44,7 @@ public class AwesomeShop {
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(MOD_ID);
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(MOD_ID);
     public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITY_TYPES = DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, MOD_ID);
+    public static final DeferredRegister<MenuType<?>> MENUS = DeferredRegister.create(Registries.MENU, MOD_ID);
 
     public static final DeferredBlock<Block> SHOP_BLOCK = BLOCKS.register("shop_block",
             () -> new ShopBlock(BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(3.5F).requiresCorrectToolForDrops()));
@@ -47,6 +53,9 @@ public class AwesomeShop {
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ShopBlockEntity>> SHOP_BLOCK_ENTITY = BLOCK_ENTITY_TYPES
             .register("shop_block", () -> BlockEntityType.Builder.of(ShopBlockEntity::new, SHOP_BLOCK.get()).build(null));
+
+    public static final DeferredHolder<MenuType<?>, MenuType<ShopMenu>> SHOP_MENU = MENUS
+            .register("shop_menu", () -> IMenuTypeExtension.create((IContainerFactory<ShopMenu>) ShopMenu::new));
 
     // The constructor for the mod class is the first code that is run when your mod is loaded.
     // FML will recognize some parameter types like IEventBus or ModContainer and pass them in automatically.
@@ -57,6 +66,7 @@ public class AwesomeShop {
         BLOCKS.register(modEventBus);
         ITEMS.register(modEventBus);
         BLOCK_ENTITY_TYPES.register(modEventBus);
+        MENUS.register(modEventBus);
 
         // Register ourselves for server and other game events we are interested in.
         // Note that this is necessary if and only if we want *this* class (ExampleMod) to respond directly to events.
@@ -68,6 +78,8 @@ public class AwesomeShop {
 
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+
+        modEventBus.addListener(AwesomeShopClient::registerScreens);
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {

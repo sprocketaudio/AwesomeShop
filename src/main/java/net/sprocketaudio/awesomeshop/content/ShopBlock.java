@@ -2,9 +2,9 @@ package net.sprocketaudio.awesomeshop.content;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
@@ -31,32 +31,20 @@ public class ShopBlock extends Block implements EntityBlock {
             return InteractionResult.PASS;
         }
 
-        if (level.isClientSide) {
-            return InteractionResult.sidedSuccess(true);
-        }
-
         var offers = Config.getConfiguredOffers();
         if (offers.isEmpty()) {
-            player.displayClientMessage(Component.translatable("block.awesomeshop.shop_block.no_offers"), true);
+            if (!level.isClientSide) {
+                player.displayClientMessage(Component.translatable("block.awesomeshop.shop_block.no_offers"), true);
+            }
             return InteractionResult.CONSUME;
         }
 
-        int offerIndex;
-        if (player.isShiftKeyDown()) {
-            offerIndex = shop.cycleOffer(offers.size());
-            ItemStack offer = offers.get(offerIndex);
-            player.displayClientMessage(Config.offerSummaryMessage(offer, Config.getCurrencyItem()), true);
-            return InteractionResult.CONSUME;
+        if (!level.isClientSide) {
+            if (player instanceof ServerPlayer serverPlayer) {
+                serverPlayer.openMenu(shop, buffer -> ShopMenu.writeScreenData(shop, buffer));
+            }
         }
-
-        offerIndex = shop.getOfferIndex(offers.size());
-        ItemStack offer = offers.get(offerIndex).copy();
-        if (shop.tryPurchase(offer, player)) {
-            player.displayClientMessage(Config.purchaseSuccessMessage(offer), true);
-        } else {
-            player.displayClientMessage(Config.purchaseFailureMessage(offer, Config.getCurrencyItem()), true);
-        }
-        return InteractionResult.CONSUME;
+        return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
     @Override
