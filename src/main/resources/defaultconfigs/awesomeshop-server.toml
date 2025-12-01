@@ -8,9 +8,9 @@ currencies = [
 ]
 
 # Items that can be purchased from the shop block along with their prices and currencies.
-# Format: namespace:item|price|currency
-# Example: minecraft:apple|2|minecraft:emerald
+# Format: namespace:item|currency=price[,currency=price]
+# Example: minecraft:apple|minecraft:emerald=2,minecraft:gold_ingot=1
 shopOffers = [
-    "minecraft:apple|1|minecraft:emerald",
-    "minecraft:bread|2|minecraft:gold_ingot"
+    "minecraft:apple|minecraft:emerald=1",
+    "minecraft:bread|minecraft:gold_ingot=2"
 ]

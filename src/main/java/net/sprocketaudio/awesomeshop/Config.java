@@ -28,10 +28,12 @@ public class Config {
                     Config::validateItemName);
 
     public static final ModConfigSpec.ConfigValue<List<? extends String>> SHOP_OFFERS = BUILDER
-            .comment("Items that can be purchased from the shop block along with their prices and currencies.",
-                    "Format: namespace:item|price|currency", "Example: minecraft:apple|2|minecraft:emerald")
+            .comment(
+                    "Items that can be purchased from the shop block along with their prices and currencies.",
+                    "Format: namespace:item|currency=price[,currency=price]",
+                    "Example: minecraft:apple|minecraft:emerald=2,minecraft:gold_ingot=1")
             .defineListAllowEmpty("shopOffers",
-                    List.of("minecraft:apple|1|minecraft:emerald", "minecraft:bread|2|minecraft:gold_ingot"), () -> "",
+                    List.of("minecraft:apple|minecraft:emerald=1", "minecraft:bread|minecraft:gold_ingot=2"), () -> "",
                     Config::validateOffer);
 
     static final ModConfigSpec SPEC = BUILDER.build();
@@ -65,41 +67,38 @@ public class Config {
     }
 
     public static Component offerSummaryMessage(ConfiguredOffer offer) {
-        return Component.translatable("block.awesomeshop.shop_block.offer", offer.item().getHoverName(), offer.price(),
-                Component.translatable(offer.currency().item().getDescriptionId()));
+        return Component.translatable("block.awesomeshop.shop_block.offer", offer.item().getHoverName(),
+                formatPriceList(offer));
     }
 
     public static Component purchaseSuccessMessage(ItemStack offer, int quantity) {
         return Component.translatable("block.awesomeshop.shop_block.purchase", offer.getHoverName(), quantity);
     }
 
-    public static Component purchaseFailureMessage(ItemStack offer, Item currency, int totalCost) {
+    public static Component purchaseFailureMessage(ItemStack offer, ConfiguredOffer configuredOffer) {
         return Component.translatable("block.awesomeshop.shop_block.failed", offer.getHoverName(),
-                Component.translatable(currency.getDescriptionId()), totalCost);
+                formatPriceList(configuredOffer));
     }
 
     public static class ConfiguredOffer {
         private final ItemStack item;
-        private final int price;
-        private final ConfiguredCurrency currency;
+        private final List<PriceRequirement> prices;
 
-        public ConfiguredOffer(ItemStack item, int price, ConfiguredCurrency currency) {
+        public ConfiguredOffer(ItemStack item, List<PriceRequirement> prices) {
             this.item = item;
-            this.price = price;
-            this.currency = currency;
+            this.prices = List.copyOf(prices);
         }
 
         public ItemStack item() {
             return item;
         }
 
-        public int price() {
-            return price;
+        public List<PriceRequirement> prices() {
+            return prices;
         }
+    }
 
-        public ConfiguredCurrency currency() {
-            return currency;
-        }
+    public record PriceRequirement(ConfiguredCurrency currency, int price) {
     }
 
     public static class ConfiguredCurrency {
@@ -125,25 +124,17 @@ public class Config {
             return false;
         }
 
-        String[] parts = raw.split("\\|", 3);
-        if (parts.length != 3) {
+        String[] parts = raw.split("\\|", 2);
+        if (parts.length != 2) {
             return false;
         }
 
         ResourceLocation itemId = ResourceLocation.tryParse(parts[0]);
-        ResourceLocation currencyId = ResourceLocation.tryParse(parts[2]);
-        if (itemId == null || currencyId == null || !BuiltInRegistries.ITEM.containsKey(itemId)
-                || !BuiltInRegistries.ITEM.containsKey(currencyId)) {
+        if (itemId == null || !BuiltInRegistries.ITEM.containsKey(itemId)) {
             return false;
         }
 
-        try {
-            int price = Integer.parseInt(parts[1]);
-            return price > 0;
-        } catch (NumberFormatException ex) {
-            AwesomeShop.LOGGER.warn("Invalid price for shop offer '{}': {}", raw, ex.getMessage());
-            return false;
-        }
+        return parsePriceRequirements(parts[1], raw).stream().allMatch(req -> BuiltInRegistries.ITEM.containsKey(req.id()));
     }
 
     private static Optional<ConfiguredCurrency> parseCurrency(String currencyId) {
@@ -157,33 +148,35 @@ public class Config {
     }
 
     private static Optional<ConfiguredOffer> parseOffer(final String raw, Map<ResourceLocation, ConfiguredCurrency> currencyLookup) {
-        String[] parts = raw.split("\\|", 3);
-        if (parts.length != 3) {
+        String[] parts = raw.split("\\|", 2);
+        if (parts.length != 2) {
             return Optional.empty();
         }
 
         ResourceLocation itemId = ResourceLocation.tryParse(parts[0]);
-        ResourceLocation currencyId = ResourceLocation.tryParse(parts[2]);
-        if (itemId == null || currencyId == null || !BuiltInRegistries.ITEM.containsKey(itemId)
-                || !BuiltInRegistries.ITEM.containsKey(currencyId)) {
+        if (itemId == null || !BuiltInRegistries.ITEM.containsKey(itemId)) {
             return Optional.empty();
         }
 
-        try {
-            int price = Integer.parseInt(parts[1]);
-            if (price <= 0) {
-                return Optional.empty();
-            }
-            ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.get(itemId));
-            ConfiguredCurrency currency = currencyLookup.get(currencyId);
-            if (currency == null) {
-                return Optional.empty();
-            }
-            return Optional.of(new ConfiguredOffer(stack, price, currency));
-        } catch (NumberFormatException ex) {
-            AwesomeShop.LOGGER.warn("Invalid price for shop offer '{}': {}", raw, ex.getMessage());
+        List<PriceRequirement> requirements = parsePriceRequirements(parts[1], raw).stream()
+                .map(req -> buildRequirement(req, currencyLookup))
+                .flatMap(Optional::stream)
+                .collect(Collectors.toCollection(ArrayList::new));
+        if (requirements.isEmpty()) {
             return Optional.empty();
         }
+
+        ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.get(itemId));
+        return Optional.of(new ConfiguredOffer(stack, requirements));
+    }
+
+    private static Optional<PriceRequirement> buildRequirement(RawRequirement req,
+            Map<ResourceLocation, ConfiguredCurrency> currencyLookup) {
+        ConfiguredCurrency currency = currencyLookup.get(req.id());
+        if (currency == null || req.price() <= 0) {
+            return Optional.empty();
+        }
+        return Optional.of(new PriceRequirement(currency, req.price()));
     }
 
     private static Map<ResourceLocation, ConfiguredCurrency> buildCurrencyLookup(List<ConfiguredCurrency> currencies) {
@@ -196,5 +189,56 @@ public class Config {
             lookup.put(fallback.id(), fallback);
         }
         return lookup;
+    }
+
+    private record RawRequirement(ResourceLocation id, int price) {
+    }
+
+    private static List<RawRequirement> parsePriceRequirements(String priceSection, String rawOffer) {
+        List<RawRequirement> requirements = new ArrayList<>();
+        String[] entries = priceSection.split(",");
+        for (String entry : entries) {
+            parseRequirement(entry.trim(), rawOffer).ifPresent(requirements::add);
+        }
+        return requirements;
+    }
+
+    private static Optional<RawRequirement> parseRequirement(String entry, String rawOffer) {
+        if (entry.isEmpty()) {
+            return Optional.empty();
+        }
+
+        String[] parts = entry.split("=", 2);
+        if (parts.length != 2) {
+            AwesomeShop.LOGGER.warn("Ignoring unrecognized price entry '{}' in shop offer '{}'.", entry, rawOffer);
+            return Optional.empty();
+        }
+
+        return parseKeyValueRequirement(parts[0].trim(), parts[1].trim(), rawOffer);
+    }
+
+    private static Optional<RawRequirement> parseKeyValueRequirement(String currencyToken, String priceToken, String rawOffer) {
+        ResourceLocation currencyId = ResourceLocation.tryParse(currencyToken);
+        if (currencyId == null || !BuiltInRegistries.ITEM.containsKey(currencyId)) {
+            AwesomeShop.LOGGER.warn("Ignoring invalid currency '{}' in shop offer '{}'.", currencyToken, rawOffer);
+            return Optional.empty();
+        }
+
+        try {
+            int price = Integer.parseInt(priceToken);
+            if (price > 0) {
+                return Optional.of(new RawRequirement(currencyId, price));
+            }
+        } catch (NumberFormatException ex) {
+            AwesomeShop.LOGGER.warn("Invalid price for shop offer '{}': {}", rawOffer, ex.getMessage());
+        }
+        return Optional.empty();
+    }
+
+    private static Component formatPriceList(ConfiguredOffer offer) {
+        return Component.literal(offer.prices().stream()
+                .map(price -> Component.translatable("block.awesomeshop.shop_block.price_entry", price.price(),
+                        Component.translatable(price.currency().item().getDescriptionId())).getString())
+                .collect(Collectors.joining(", ")));
     }
 }

@@ -47,15 +47,17 @@ public class ShopBlockEntity extends BlockEntity implements WorldlyContainer, Me
             return false;
         }
 
-        Item currency = offer.currency().item();
-        int price = offer.price();
-        int totalCost = price * quantity;
-        int available = getCurrencyCount(offer.currency());
-        if (totalCost <= 0 || available < totalCost) {
-            return false;
+        Map<ResourceLocation, Integer> updatedCounts = new HashMap<>();
+        for (Config.PriceRequirement requirement : offer.prices()) {
+            int requiredTotal = requirement.price() * quantity;
+            int available = getCurrencyCount(requirement.currency());
+            if (requiredTotal <= 0 || available < requiredTotal) {
+                return false;
+            }
+            updatedCounts.put(requirement.currency().id(), available - requiredTotal);
         }
 
-        setCurrencyCount(offer.currency().id(), available - totalCost);
+        updatedCounts.forEach(this::setCurrencyCount);
         ItemStack delivery = offer.item().copy();
         delivery.setCount(offer.item().getCount() * quantity);
         boolean fullyAdded = player.addItem(delivery);
