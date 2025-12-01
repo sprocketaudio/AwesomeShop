@@ -18,6 +18,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.sprocketaudio.awesomeshop.AwesomeShop;
 import net.sprocketaudio.awesomeshop.Config;
+import net.sprocketaudio.awesomeshop.Config.ConfiguredOffer;
 
 import net.minecraft.network.chat.Component;
 
@@ -31,21 +32,21 @@ public class ShopBlockEntity extends BlockEntity implements WorldlyContainer, Me
         super(AwesomeShop.SHOP_BLOCK_ENTITY.get(), pos, state);
     }
 
-    public boolean tryPurchase(ItemStack offer, int quantity, Player player) {
+    public boolean tryPurchase(ConfiguredOffer offer, int quantity, Player player) {
         if (level == null || level.isClientSide || quantity <= 0) {
             return false;
         }
 
         Item currency = Config.getCurrencyItem();
-        int price = Config.getOfferPrice(offer);
+        int price = offer.price();
         int totalCost = price * quantity;
         if (totalCost <= 0 || currencyCount < totalCost) {
             return false;
         }
 
         currencyCount -= totalCost;
-        ItemStack delivery = offer.copy();
-        delivery.setCount(offer.getCount() * quantity);
+        ItemStack delivery = offer.item().copy();
+        delivery.setCount(offer.item().getCount() * quantity);
         boolean fullyAdded = player.addItem(delivery);
         if (!fullyAdded && !delivery.isEmpty()) {
             player.drop(delivery, false);

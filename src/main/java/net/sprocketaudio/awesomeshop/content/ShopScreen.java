@@ -8,8 +8,8 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.util.Mth;
+import net.sprocketaudio.awesomeshop.Config.ConfiguredOffer;
 
 public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private static final int PADDING = 8;
@@ -35,9 +35,9 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         int x = leftPos + PADDING;
         int y = topPos + 60;
 
-        List<ItemStack> offers = menu.getOffers();
+        List<ConfiguredOffer> offers = menu.getOffers();
         for (int i = 0; i < offers.size(); i++) {
-            ItemStack offer = offers.get(i);
+            ConfiguredOffer offer = offers.get(i);
             int buttonIndex = i;
             int rowY = y + i * ROW_HEIGHT;
             addRenderableWidget(Button.builder(Component.literal("-"), b -> adjustQuantity(buttonIndex, -1))
@@ -70,12 +70,12 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     }
 
     private void adjustQuantity(int index, int delta) {
-        List<ItemStack> offers = menu.getOffers();
+        List<ConfiguredOffer> offers = menu.getOffers();
         if (index < 0 || index >= offers.size()) {
             return;
         }
 
-        ItemStack offer = offers.get(index);
+        ConfiguredOffer offer = offers.get(index);
         int price = menu.getPriceForOffer(offer);
         int maxAffordable = price > 0 ? menu.getCurrencyCount() / price : Integer.MAX_VALUE;
         int newQuantity = Mth.clamp(selectedQuantities[index] + delta, 0, maxAffordable);
@@ -97,8 +97,8 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         }
         Button button = purchaseButtons.get(index);
         int quantity = selectedQuantities[index];
-        ItemStack offer = menu.getOffers().get(index);
-        button.setMessage(Component.translatable("screen.awesomeshop.shop_block.buy", quantity, offer.getHoverName()));
+        ConfiguredOffer offer = menu.getOffers().get(index);
+        button.setMessage(Component.translatable("screen.awesomeshop.shop_block.buy", quantity, offer.item().getHoverName()));
         button.active = quantity > 0;
     }
 
@@ -115,25 +115,28 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     }
 
     private void renderOfferDetails(GuiGraphics graphics) {
-        List<ItemStack> offers = menu.getOffers();
+        List<ConfiguredOffer> offers = menu.getOffers();
         Component currencyName = Component.translatable(menu.getCurrencyItem().getDescriptionId());
         int y = topPos + 60;
 
         for (int i = 0; i < offers.size(); i++) {
-            ItemStack offer = offers.get(i);
+            ConfiguredOffer offer = offers.get(i);
             int baseY = y + i * ROW_HEIGHT;
 
             Component priceLine = Component.translatable("screen.awesomeshop.shop_block.price_each", menu.getPriceForOffer(offer), currencyName);
             int totalCost = menu.getPriceForOffer(offer) * selectedQuantities[i];
             Component totalLine = Component.translatable("screen.awesomeshop.shop_block.total_price", totalCost, currencyName);
-            Component itemName = offer.getHoverName();
+            Component itemName = offer.item().getHoverName();
 
-            graphics.drawString(font, itemName, leftPos + PADDING, baseY + 6, 0xFFFFFF);
+            graphics.renderItem(offer.item(), leftPos + PADDING, baseY + 2);
+            graphics.renderItemDecorations(font, offer.item(), leftPos + PADDING, baseY + 2);
+            graphics.drawString(font, itemName, leftPos + PADDING + 24, baseY + 6, 0xFFFFFF);
             graphics.drawString(font, priceLine, leftPos + PADDING + 100, baseY + 2, 0xAAAAAA);
             graphics.drawString(font, totalLine, leftPos + PADDING + 100, baseY + 2 + font.lineHeight + 2, 0xAAAAAA);
 
             Component quantityLine = Component.translatable("screen.awesomeshop.shop_block.quantity", selectedQuantities[i]);
-            graphics.drawString(font, quantityLine, leftPos + PADDING + 26, baseY + 6, 0xFFFFFF);
+            graphics.drawString(font, quantityLine, leftPos + PADDING + 24,
+                    baseY + 6 + font.lineHeight + 2, 0xFFFFFF);
         }
     }
 

@@ -18,11 +18,12 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.sprocketaudio.awesomeshop.AwesomeShop;
 import net.sprocketaudio.awesomeshop.Config;
+import net.sprocketaudio.awesomeshop.Config.ConfiguredOffer;
 
 public class ShopMenu extends AbstractContainerMenu {
     private final ContainerLevelAccess access;
     private final ShopBlockEntity shop;
-    private final List<ItemStack> offers;
+    private final List<ConfiguredOffer> offers;
     private final Item currencyItem;
 
     private int currencyCount;
@@ -33,11 +34,11 @@ public class ShopMenu extends AbstractContainerMenu {
         this(id, inventory, readShopFromClient(inventory.player.level(), data), readCurrency(data), readOffers(data));
     }
 
-    public ShopMenu(int id, Inventory inventory, ShopBlockEntity shop, List<ItemStack> offers) {
+    public ShopMenu(int id, Inventory inventory, ShopBlockEntity shop, List<ConfiguredOffer> offers) {
         this(id, inventory, shop, getCurrencyItem(shop), offers);
     }
 
-    private ShopMenu(int id, Inventory inventory, ShopBlockEntity shop, Item currencyItem, List<ItemStack> offers) {
+    private ShopMenu(int id, Inventory inventory, ShopBlockEntity shop, Item currencyItem, List<ConfiguredOffer> offers) {
         super(AwesomeShop.SHOP_MENU.get(), id);
         this.shop = shop;
         this.offers = List.copyOf(offers);
@@ -67,8 +68,12 @@ public class ShopMenu extends AbstractContainerMenu {
         return BuiltInRegistries.ITEM.getOptional(data.readResourceLocation()).orElse(Config.getCurrencyItem());
     }
 
-    private static List<ItemStack> readOffers(RegistryFriendlyByteBuf data) {
-        return data.readList(buf -> ItemStack.STREAM_CODEC.decode((RegistryFriendlyByteBuf) buf));
+    private static List<ConfiguredOffer> readOffers(RegistryFriendlyByteBuf data) {
+        return data.readList(buf -> {
+            ItemStack stack = ItemStack.STREAM_CODEC.decode((RegistryFriendlyByteBuf) buf);
+            int price = ((RegistryFriendlyByteBuf) buf).readVarInt();
+            return new ConfiguredOffer(stack, price);
+        });
     }
 
     private static Item getCurrencyItem(ShopBlockEntity shop) {
@@ -78,7 +83,7 @@ public class ShopMenu extends AbstractContainerMenu {
         return Config.getCurrencyItem();
     }
 
-    public List<ItemStack> getOffers() {
+    public List<ConfiguredOffer> getOffers() {
         return offers;
     }
 
@@ -93,8 +98,8 @@ public class ShopMenu extends AbstractContainerMenu {
         return currencyCount;
     }
 
-    public int getPriceForOffer(ItemStack offer) {
-        return Config.getOfferPrice(offer);
+    public int getPriceForOffer(ConfiguredOffer offer) {
+        return offer.price();
     }
 
     @Override
@@ -110,17 +115,17 @@ public class ShopMenu extends AbstractContainerMenu {
             return false;
         }
 
-        ItemStack offer = offers.get(offerIndex);
-        if (offer.isEmpty()) {
+        ConfiguredOffer offer = offers.get(offerIndex);
+        if (offer.item().isEmpty()) {
             return false;
         }
 
         boolean success = shop.tryPurchase(offer, quantity, player);
         if (success) {
-            player.displayClientMessage(Config.purchaseSuccessMessage(offer, quantity), true);
+            player.displayClientMessage(Config.purchaseSuccessMessage(offer.item(), quantity), true);
         } else {
-            int totalCost = Config.getOfferPrice(offer) * quantity;
-            player.displayClientMessage(Config.purchaseFailureMessage(offer, shop.getCurrencyItem(), totalCost), true);
+            int totalCost = offer.price() * quantity;
+            player.displayClientMessage(Config.purchaseFailureMessage(offer.item(), shop.getCurrencyItem(), totalCost), true);
         }
         return true;
     }
@@ -138,7 +143,9 @@ public class ShopMenu extends AbstractContainerMenu {
     public static void writeScreenData(ShopBlockEntity shop, RegistryFriendlyByteBuf buffer) {
         buffer.writeBlockPos(Objects.requireNonNull(shop).getBlockPos());
         buffer.writeResourceLocation(shop.getCurrencyId());
-        buffer.writeCollection(new ArrayList<>(Config.getConfiguredOffers()),
-                (buf, stack) -> ItemStack.STREAM_CODEC.encode((RegistryFriendlyByteBuf) buf, stack));
+        buffer.writeCollection(new ArrayList<>(Config.getConfiguredOffers()), (buf, offer) -> {
+            ItemStack.STREAM_CODEC.encode((RegistryFriendlyByteBuf) buf, offer.item());
+            ((RegistryFriendlyByteBuf) buf).writeVarInt(offer.price());
+        });
     }
 }
