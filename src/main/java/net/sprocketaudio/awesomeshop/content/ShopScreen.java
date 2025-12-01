@@ -141,10 +141,10 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             graphics.drawString(font, priceLine, priceX, baseY + 2, 0xAAAAAA);
             graphics.drawString(font, totalLine, priceX, baseY + 2 + font.lineHeight + 2, 0xAAAAAA);
 
-            Component quantityLine = Component.translatable("screen.awesomeshop.shop_block.quantity", selectedQuantities[i]);
-            int quantityTextX = leftPos + imageWidth - PADDING - PURCHASE_BUTTON_WIDTH - BUTTON_WIDTH - 6 + BUTTON_WIDTH + 4;
-            graphics.drawString(font, quantityLine, quantityTextX,
-                    baseY + 4 + font.lineHeight + 2, 0xFFFFFF);
+            //Component quantityLine = Component.translatable("screen.awesomeshop.shop_block.quantity", selectedQuantities[i]);
+            //int quantityTextX = leftPos + imageWidth - PADDING - PURCHASE_BUTTON_WIDTH - BUTTON_WIDTH - 6 + BUTTON_WIDTH + 4;
+            //graphics.drawString(font, quantityLine, quantityTextX,
+            //        baseY + 4 + font.lineHeight + 2, 0xFFFFFF);
         }
     }
 
