@@ -11,15 +11,15 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
-import net.sprocketaudio.awesomeshop.Config.ConfiguredOffer;
+import net.minecraft.world.item.ItemStack;
 import net.sprocketaudio.awesomeshop.Config.ConfiguredCurrency;
+import net.sprocketaudio.awesomeshop.Config.ConfiguredOffer;
+import net.sprocketaudio.awesomeshop.Config.PriceRequirement;
 
 public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private static final int PADDING = 8;
     private static final int SECTION_TOP = 64;
-    private static final int ROW_HEIGHT = 36;
-    private static final int HEADER_HEIGHT = 18;
-    private static final int GROUP_GAP = 6;
+    private static final int ROW_GAP = 6;
     private static final int BUTTON_WIDTH = 18;
     private static final int BUTTON_HEIGHT = 14;
     private static final int BUTTON_GAP = 2;
@@ -30,12 +30,11 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
 
     private final int[] selectedQuantities;
     private final Map<Integer, Button> purchaseButtons = new HashMap<>();
-    private final List<OfferGroup> groups;
+    private List<OfferRow> rows = List.of();
 
     public ShopScreen(ShopMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
         this.selectedQuantities = new int[menu.getOffers().size()];
-        this.groups = buildGroups(menu.getOffers(), menu.getCurrencies());
         this.imageWidth = 360;
         this.imageHeight = calculateImageHeight();
     }
@@ -44,43 +43,34 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     protected void init() {
         super.init();
         lockGuiScale();
-        this.imageHeight = calculateImageHeight();
         this.topPos = PADDING;
         this.leftPos = (this.width - this.imageWidth) / 2;
+        this.rows = buildRows();
+        this.imageHeight = calculateImageHeight();
         clearWidgets();
         purchaseButtons.clear();
 
-        int y = topPos + SECTION_TOP;
+        for (OfferRow row : rows) {
+            int index = row.offerIndex();
+            int rowY = row.startY();
+            int quantityButtonX = leftPos + imageWidth - PADDING - PURCHASE_BUTTON_WIDTH - BUTTON_WIDTH - 6;
+            int plusY = rowY + 2;
+            int minusY = plusY + BUTTON_HEIGHT + BUTTON_GAP;
 
-        for (OfferGroup group : groups) {
-            if (group.offerIndices().isEmpty()) {
-                continue;
-            }
-            y += HEADER_HEIGHT;
-            for (int index : group.offerIndices()) {
-                int rowY = y;
-                int quantityButtonX = leftPos + imageWidth - PADDING - PURCHASE_BUTTON_WIDTH - BUTTON_WIDTH - 6;
-                int plusY = rowY + 2;
-                int minusY = plusY + BUTTON_HEIGHT + BUTTON_GAP;
+            addRenderableWidget(Button.builder(Component.literal("+"), b -> adjustQuantity(index, 1))
+                    .bounds(quantityButtonX, plusY, BUTTON_WIDTH, BUTTON_HEIGHT)
+                    .build());
 
-                addRenderableWidget(Button.builder(Component.literal("+"), b -> adjustQuantity(index, 1))
-                        .bounds(quantityButtonX, plusY, BUTTON_WIDTH, BUTTON_HEIGHT)
-                        .build());
+            addRenderableWidget(Button.builder(Component.literal("-"), b -> adjustQuantity(index, -1))
+                    .bounds(quantityButtonX, minusY, BUTTON_WIDTH, BUTTON_HEIGHT)
+                    .build());
 
-                addRenderableWidget(Button.builder(Component.literal("-"), b -> adjustQuantity(index, -1))
-                        .bounds(quantityButtonX, minusY, BUTTON_WIDTH, BUTTON_HEIGHT)
-                        .build());
-
-                Button purchaseButton = Button.builder(Component.literal(""), b -> purchaseOffer(index))
-                        .bounds(leftPos + imageWidth - PADDING - PURCHASE_BUTTON_WIDTH, rowY, PURCHASE_BUTTON_WIDTH,
-                                BUTTON_HEIGHT)
-                        .build();
-                purchaseButtons.put(index, addRenderableWidget(purchaseButton));
-                updatePurchaseButton(index);
-
-                y += ROW_HEIGHT;
-            }
-            y += GROUP_GAP;
+            Button purchaseButton = Button.builder(Component.literal(""), b -> purchaseOffer(index))
+                    .bounds(leftPos + imageWidth - PADDING - PURCHASE_BUTTON_WIDTH, rowY, PURCHASE_BUTTON_WIDTH,
+                            BUTTON_HEIGHT)
+                    .build();
+            purchaseButtons.put(index, addRenderableWidget(purchaseButton));
+            updatePurchaseButton(index);
         }
     }
 
@@ -104,9 +94,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         }
 
         ConfiguredOffer offer = offers.get(index);
-        int price = menu.getPriceForOffer(offer);
-        int availableCurrency = menu.getCurrencyCount(offer.currency());
-        int maxAffordable = price > 0 ? availableCurrency / price : Integer.MAX_VALUE;
+        int maxAffordable = calculateMaxAffordable(offer);
         int newQuantity = Mth.clamp(selectedQuantities[index] + delta, 0, maxAffordable);
         selectedQuantities[index] = newQuantity;
         updatePurchaseButton(index);
@@ -145,40 +133,40 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
 
     private void renderOfferDetails(GuiGraphics graphics) {
         List<ConfiguredOffer> offers = menu.getOffers();
-        int y = topPos + SECTION_TOP;
-
-        for (OfferGroup group : groups) {
-            if (group.offerIndices().isEmpty()) {
+        for (OfferRow row : rows) {
+            int index = row.offerIndex();
+            if (index < 0 || index >= offers.size()) {
                 continue;
             }
-            ConfiguredCurrency currency = group.currency();
-            Component currencyName = Component.translatable(currency.item().getDescriptionId());
-            Component header = Component.translatable("screen.awesomeshop.shop_block.currency_section",
-                    menu.getCurrencyCount(currency), currencyName);
-            graphics.drawString(font, header, leftPos + PADDING, y, 0xFFFFFF);
-            y += HEADER_HEIGHT;
 
-            for (int index : group.offerIndices()) {
-                ConfiguredOffer offer = offers.get(index);
-                int baseY = y;
+            ConfiguredOffer offer = offers.get(index);
+            int baseY = row.startY();
+            Component itemName = offer.item().getHoverName();
 
-                Component priceLine = Component.translatable("screen.awesomeshop.shop_block.price_each",
-                        menu.getPriceForOffer(offer), currencyName);
-                int totalCost = menu.getPriceForOffer(offer) * selectedQuantities[index];
-                Component totalLine = Component.translatable("screen.awesomeshop.shop_block.total_price", totalCost,
-                        currencyName);
-                Component itemName = offer.item().getHoverName();
+            graphics.renderItem(offer.item(), leftPos + PADDING, baseY + 2);
+            graphics.renderItemDecorations(font, offer.item(), leftPos + PADDING, baseY + 2);
+            graphics.drawString(font, itemName, leftPos + PADDING + 24, baseY + 4, 0xFFFFFF);
 
-                graphics.renderItem(offer.item(), leftPos + PADDING, baseY + 2);
-                graphics.renderItemDecorations(font, offer.item(), leftPos + PADDING, baseY + 2);
-                graphics.drawString(font, itemName, leftPos + PADDING + 24, baseY + 4, 0xFFFFFF);
-                int priceX = leftPos + PADDING + 120;
-                graphics.drawString(font, priceLine, priceX, baseY + 2, 0xAAAAAA);
-                graphics.drawString(font, totalLine, priceX, baseY + 2 + font.lineHeight + 2, 0xAAAAAA);
+            int currencyY = baseY + font.lineHeight + 6;
+            for (PriceRequirement requirement : offer.prices()) {
+                ConfiguredCurrency currency = requirement.currency();
+                int currencyX = leftPos + PADDING + 120;
 
-                y += ROW_HEIGHT;
+                ItemStack currencyStack = new ItemStack(currency.item());
+                graphics.renderItem(currencyStack, currencyX, currencyY);
+                graphics.renderItemDecorations(font, currencyStack, currencyX, currencyY);
+
+                Component eachLine = Component.translatable("screen.awesomeshop.shop_block.price_each_value",
+                        requirement.price());
+                int totalCost = requirement.price() * selectedQuantities[index];
+                Component totalLine = Component.translatable("screen.awesomeshop.shop_block.total_and_stored", totalCost,
+                        menu.getCurrencyCount(currency));
+
+                graphics.drawString(font, eachLine, currencyX + 20, currencyY, 0xAAAAAA);
+                graphics.drawString(font, totalLine, currencyX + 20, currencyY + font.lineHeight + 2, 0xAAAAAA);
+
+                currencyY += getCurrencyLineHeight();
             }
-            y += GROUP_GAP;
         }
     }
 
@@ -223,34 +211,54 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
 
     private int calculateImageHeight() {
         int height = SECTION_TOP;
-        for (OfferGroup group : groups) {
-            if (group.offerIndices().isEmpty()) {
-                continue;
+        for (int i = 0; i < rows.size(); i++) {
+            height += rows.get(i).height();
+            if (i < rows.size() - 1) {
+                height += ROW_GAP;
             }
-            height += HEADER_HEIGHT;
-            height += group.offerIndices().size() * ROW_HEIGHT;
-            height += GROUP_GAP;
         }
         height += PADDING;
         return Math.max(height, 140);
     }
 
-    private List<OfferGroup> buildGroups(List<ConfiguredOffer> offers, List<ConfiguredCurrency> currencies) {
-        List<OfferGroup> result = new ArrayList<>();
-        for (ConfiguredCurrency currency : currencies) {
-            List<Integer> indices = new ArrayList<>();
-            for (int i = 0; i < offers.size(); i++) {
-                if (offers.get(i).currency().id().equals(currency.id())) {
-                    indices.add(i);
-                }
-            }
-            if (!indices.isEmpty()) {
-                result.add(new OfferGroup(currency, indices));
-            }
+    private List<OfferRow> buildRows() {
+        List<OfferRow> result = new ArrayList<>();
+        int currentY = topPos + SECTION_TOP;
+        for (int i = 0; i < menu.getOffers().size(); i++) {
+            ConfiguredOffer offer = menu.getOffers().get(i);
+            int height = calculateOfferHeight(offer);
+            result.add(new OfferRow(i, currentY, height));
+            currentY += height + ROW_GAP;
         }
         return result;
     }
 
-    private record OfferGroup(ConfiguredCurrency currency, List<Integer> offerIndices) {
+    private int calculateOfferHeight(ConfiguredOffer offer) {
+        int lines = Math.max(1, offer.prices().size());
+        int currencyHeight = lines * getCurrencyLineHeight();
+        return Math.max(40, currencyHeight + font.lineHeight + 10);
+    }
+
+    private int getCurrencyLineHeight() {
+        return (font.lineHeight * 2) + 6;
+    }
+
+    private int calculateMaxAffordable(ConfiguredOffer offer) {
+        int maxAffordable = Integer.MAX_VALUE;
+        for (PriceRequirement requirement : offer.prices()) {
+            int priceEach = requirement.price();
+            if (priceEach <= 0) {
+                continue;
+            }
+            int available = menu.getCurrencyCount(requirement.currency());
+            maxAffordable = Math.min(maxAffordable, available / priceEach);
+        }
+        if (maxAffordable == Integer.MAX_VALUE) {
+            return 0;
+        }
+        return Math.max(0, maxAffordable);
+    }
+
+    private record OfferRow(int offerIndex, int startY, int height) {
     }
 }

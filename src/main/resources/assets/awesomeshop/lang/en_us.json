@@ -1,13 +1,16 @@
 {
   "block.awesomeshop.shop_block": "Shop Block",
   "block.awesomeshop.shop_block.no_offers": "No offers configured for this shop.",
-  "block.awesomeshop.shop_block.offer": "Offer: %1$s for %2$s x %3$s",
+  "block.awesomeshop.shop_block.offer": "Offer: %1$s for %2$s",
   "block.awesomeshop.shop_block.purchase": "You bought %2$s x %1$s!",
-  "block.awesomeshop.shop_block.failed": "This shop needs %3$s x %2$s to buy %1$s.",
+  "block.awesomeshop.shop_block.failed": "This shop needs %2$s to buy %1$s.",
   "screen.awesomeshop.shop_block.buy": "Buy %2$s x %1$s",
   "screen.awesomeshop.shop_block.currency": "Stored currency: %1$s x %2$s",
   "screen.awesomeshop.shop_block.currency_section": "Currency: %2$s (stored: %1$s)",
   "screen.awesomeshop.shop_block.price_each": "Price: %1$s x %2$s each",
   "screen.awesomeshop.shop_block.total_price": "Total: %1$s x %2$s",
-  "screen.awesomeshop.shop_block.quantity": "Selected: %1$s"
+  "screen.awesomeshop.shop_block.quantity": "Selected: %1$s",
+  "screen.awesomeshop.shop_block.price_each_value": "x%1$s each",
+  "screen.awesomeshop.shop_block.total_and_stored": "Total: x%1$s (stored: %2$s)",
+  "block.awesomeshop.shop_block.price_entry": "%1$s x %2$s"
 }

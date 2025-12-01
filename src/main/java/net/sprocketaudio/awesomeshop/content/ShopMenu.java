@@ -24,6 +24,7 @@ import net.sprocketaudio.awesomeshop.AwesomeShop;
 import net.sprocketaudio.awesomeshop.Config;
 import net.sprocketaudio.awesomeshop.Config.ConfiguredCurrency;
 import net.sprocketaudio.awesomeshop.Config.ConfiguredOffer;
+import net.sprocketaudio.awesomeshop.Config.PriceRequirement;
 
 public class ShopMenu extends AbstractContainerMenu {
     private final ContainerLevelAccess access;
@@ -116,15 +117,24 @@ public class ShopMenu extends AbstractContainerMenu {
             Map<ResourceLocation, ConfiguredCurrency> currencyLookup) {
         return data.readList(buf -> {
             ItemStack stack = ItemStack.STREAM_CODEC.decode((RegistryFriendlyByteBuf) buf);
-            int price = ((RegistryFriendlyByteBuf) buf).readVarInt();
-            ResourceLocation currencyId = ((RegistryFriendlyByteBuf) buf).readResourceLocation();
-            ConfiguredCurrency currency = currencyLookup.get(currencyId);
-            if (currency == null) {
-                currency = currencyLookup.values().stream().findFirst()
-                        .orElse(new ConfiguredCurrency(currencyId,
-                                BuiltInRegistries.ITEM.getOptional(currencyId).orElse(Items.EMERALD)));
+            int requirementCount = ((RegistryFriendlyByteBuf) buf).readVarInt();
+            List<PriceRequirement> prices = new ArrayList<>();
+            for (int i = 0; i < requirementCount; i++) {
+                ResourceLocation currencyId = ((RegistryFriendlyByteBuf) buf).readResourceLocation();
+                int price = ((RegistryFriendlyByteBuf) buf).readVarInt();
+                ConfiguredCurrency currency = currencyLookup.get(currencyId);
+                if (currency != null && price > 0) {
+                    prices.add(new PriceRequirement(currency, price));
+                }
             }
-            return new ConfiguredOffer(stack, price, currency);
+
+            if (prices.isEmpty()) {
+                ConfiguredCurrency fallback = currencyLookup.values().stream().findFirst()
+                        .orElse(new ConfiguredCurrency(ResourceLocation.parse("minecraft:emerald"), Items.EMERALD));
+                prices.add(new PriceRequirement(fallback, 1));
+            }
+
+            return new ConfiguredOffer(stack, prices);
         });
     }
 
@@ -161,10 +171,6 @@ public class ShopMenu extends AbstractContainerMenu {
         return 0;
     }
 
-    public int getPriceForOffer(ConfiguredOffer offer) {
-        return offer.price();
-    }
-
     @Override
     public boolean clickMenuButton(Player player, int id) {
         int offerSize = offerCountLookup.getAsInt();
@@ -187,8 +193,7 @@ public class ShopMenu extends AbstractContainerMenu {
         if (success) {
             player.displayClientMessage(Config.purchaseSuccessMessage(offer.item(), quantity), true);
         } else {
-            int totalCost = offer.price() * quantity;
-            player.displayClientMessage(Config.purchaseFailureMessage(offer.item(), offer.currency().item(), totalCost), true);
+            player.displayClientMessage(Config.purchaseFailureMessage(offer.item(), offer), true);
         }
         return true;
     }
@@ -209,8 +214,11 @@ public class ShopMenu extends AbstractContainerMenu {
         buffer.writeCollection(currencies, (buf, currency) -> buf.writeResourceLocation(currency.id()));
         buffer.writeCollection(new ArrayList<>(Config.getConfiguredOffers()), (buf, offer) -> {
             ItemStack.STREAM_CODEC.encode((RegistryFriendlyByteBuf) buf, offer.item());
-            ((RegistryFriendlyByteBuf) buf).writeVarInt(offer.price());
-            ((RegistryFriendlyByteBuf) buf).writeResourceLocation(offer.currency().id());
+            ((RegistryFriendlyByteBuf) buf).writeVarInt(offer.prices().size());
+            offer.prices().forEach(price -> {
+                ((RegistryFriendlyByteBuf) buf).writeResourceLocation(price.currency().id());
+                ((RegistryFriendlyByteBuf) buf).writeVarInt(price.price());
+            });
         });
     }
 }
