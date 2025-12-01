@@ -30,8 +30,9 @@ public class Config {
     public static final ModConfigSpec.ConfigValue<List<? extends String>> SHOP_OFFERS = BUILDER
             .comment(
                     "Items that can be purchased from the shop block along with their prices and currencies.",
-                    "Format: namespace:item|currency=price[,currency=price]", 
-                    "Example: minecraft:apple|minecraft:emerald=2,minecraft:gold_ingot=1")
+                    "Format: namespace:item|currency=price[,currency=price]",
+                    "Example: minecraft:apple|minecraft:emerald=2,minecraft:gold_ingot=1",
+                    "Legacy single-currency format is also supported: namespace:item|price|currency")
             .defineListAllowEmpty("shopOffers",
                     List.of("minecraft:apple|minecraft:emerald=1", "minecraft:bread|minecraft:gold_ingot=2"), () -> "",
                     Config::validateOffer);
@@ -134,7 +135,7 @@ public class Config {
             return false;
         }
 
-        return parsePriceRequirements(parts[1]).stream().allMatch(req -> BuiltInRegistries.ITEM.containsKey(req.id()));
+        return parsePriceRequirements(parts[1], raw).stream().allMatch(req -> BuiltInRegistries.ITEM.containsKey(req.id()));
     }
 
     private static Optional<ConfiguredCurrency> parseCurrency(String currencyId) {
@@ -158,7 +159,7 @@ public class Config {
             return Optional.empty();
         }
 
-        List<PriceRequirement> requirements = parsePriceRequirements(parts[1]).stream()
+        List<PriceRequirement> requirements = parsePriceRequirements(parts[1], raw).stream()
                 .map(req -> buildRequirement(req, currencyLookup))
                 .flatMap(Optional::stream)
                 .collect(Collectors.toCollection(ArrayList::new));
@@ -194,28 +195,85 @@ public class Config {
     private record RawRequirement(ResourceLocation id, int price) {
     }
 
-    private static List<RawRequirement> parsePriceRequirements(String raw) {
+    private static List<RawRequirement> parsePriceRequirements(String priceSection, String rawOffer) {
         List<RawRequirement> requirements = new ArrayList<>();
-        String[] entries = raw.split(",");
+        String[] entries = priceSection.split(",");
         for (String entry : entries) {
-            String[] parts = entry.split("=", 2);
-            if (parts.length != 2) {
-                continue;
-            }
-            ResourceLocation currencyId = ResourceLocation.tryParse(parts[0]);
-            if (currencyId == null || !BuiltInRegistries.ITEM.containsKey(currencyId)) {
-                continue;
-            }
-            try {
-                int price = Integer.parseInt(parts[1]);
-                if (price > 0) {
-                    requirements.add(new RawRequirement(currencyId, price));
-                }
-            } catch (NumberFormatException ex) {
-                AwesomeShop.LOGGER.warn("Invalid price for shop offer '{}': {}", raw, ex.getMessage());
-            }
+            parseRequirement(entry.trim(), rawOffer).ifPresent(requirements::add);
         }
         return requirements;
+    }
+
+    private static Optional<RawRequirement> parseRequirement(String entry, String rawOffer) {
+        if (entry.isEmpty()) {
+            return Optional.empty();
+        }
+
+        String[] parts = entry.split("=", 2);
+        if (parts.length == 2) {
+            return parseKeyValueRequirement(parts[0].trim(), parts[1].trim(), rawOffer);
+        }
+
+        return parseLegacyRequirement(entry, rawOffer);
+    }
+
+    private static Optional<RawRequirement> parseKeyValueRequirement(String currencyToken, String priceToken, String rawOffer) {
+        ResourceLocation currencyId = ResourceLocation.tryParse(currencyToken);
+        if (currencyId == null || !BuiltInRegistries.ITEM.containsKey(currencyId)) {
+            AwesomeShop.LOGGER.warn("Ignoring invalid currency '{}' in shop offer '{}'.", currencyToken, rawOffer);
+            return Optional.empty();
+        }
+
+        try {
+            int price = Integer.parseInt(priceToken);
+            if (price > 0) {
+                return Optional.of(new RawRequirement(currencyId, price));
+            }
+        } catch (NumberFormatException ex) {
+            AwesomeShop.LOGGER.warn("Invalid price for shop offer '{}': {}", rawOffer, ex.getMessage());
+        }
+        return Optional.empty();
+    }
+
+    private static Optional<RawRequirement> parseLegacyRequirement(String entry, String rawOffer) {
+        String[] parts = entry.split("\\|", 2);
+        if (parts.length != 2) {
+            AwesomeShop.LOGGER.warn("Ignoring unrecognized price entry '{}' in shop offer '{}'.", entry, rawOffer);
+            return Optional.empty();
+        }
+
+        Integer parsedPrice = tryParsePositiveInt(parts[0].trim());
+        ResourceLocation parsedCurrency = tryParseCurrency(parts[1].trim());
+
+        if (parsedPrice == null || parsedCurrency == null) {
+            parsedPrice = tryParsePositiveInt(parts[1].trim());
+            parsedCurrency = tryParseCurrency(parts[0].trim());
+        }
+
+        if (parsedPrice != null && parsedCurrency != null) {
+            AwesomeShop.LOGGER.info("Parsed legacy shop price '{}' for offer '{}'", entry, rawOffer);
+            return Optional.of(new RawRequirement(parsedCurrency, parsedPrice));
+        }
+
+        AwesomeShop.LOGGER.warn("Ignoring unrecognized price entry '{}' in shop offer '{}'.", entry, rawOffer);
+        return Optional.empty();
+    }
+
+    private static Integer tryParsePositiveInt(String value) {
+        try {
+            int parsed = Integer.parseInt(value);
+            return parsed > 0 ? parsed : null;
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    private static ResourceLocation tryParseCurrency(String value) {
+        ResourceLocation currencyId = ResourceLocation.tryParse(value);
+        if (currencyId != null && BuiltInRegistries.ITEM.containsKey(currencyId)) {
+            return currencyId;
+        }
+        return null;
     }
 
     private static Component formatPriceList(ConfiguredOffer offer) {

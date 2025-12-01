@@ -10,6 +10,7 @@ currencies = [
 # Items that can be purchased from the shop block along with their prices and currencies.
 # Format: namespace:item|currency=price[,currency=price]
 # Example: minecraft:apple|minecraft:emerald=2,minecraft:gold_ingot=1
+# Legacy single-currency entries such as minecraft:apple|1|minecraft:emerald are also accepted.
 shopOffers = [
     "minecraft:apple|minecraft:emerald=1",
     "minecraft:bread|minecraft:gold_ingot=2"
