@@ -178,7 +178,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             return;
         }
 
-        int currencyX = this.width - PADDING - 16;
+        int currencyX = leftPos + imageWidth - PADDING - 16;
         int currencyY = PADDING;
 
         for (ConfiguredCurrency currency : currencies) {
