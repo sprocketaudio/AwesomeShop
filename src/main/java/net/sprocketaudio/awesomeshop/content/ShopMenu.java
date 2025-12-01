@@ -95,12 +95,13 @@ public class ShopMenu extends AbstractContainerMenu {
             return false;
         }
 
-        ItemStack offer = offers.get(id).copy();
+        ItemStack offer = offers.get(id);
         if (offer.isEmpty()) {
             return false;
         }
 
-        boolean success = shop.tryPurchase(offer, player);
+        ItemStack delivery = offer.copy();
+        boolean success = shop.tryPurchase(delivery, player);
         if (success) {
             player.displayClientMessage(Config.purchaseSuccessMessage(offer), true);
         } else {
