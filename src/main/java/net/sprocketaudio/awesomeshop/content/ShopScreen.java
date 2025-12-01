@@ -19,6 +19,9 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private static final int BUTTON_GAP = 2;
     private static final int PURCHASE_BUTTON_WIDTH = 100;
 
+    private int lockedGuiScale = -1;
+    private int originalGuiScale = -1;
+
     private final int[] selectedQuantities;
     private final List<Button> purchaseButtons = new ArrayList<>();
 
@@ -32,7 +35,11 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     @Override
     protected void init() {
         super.init();
+        lockGuiScale();
+        this.topPos = PADDING;
+        this.leftPos = (this.width - this.imageWidth) / 2;
         clearWidgets();
+        purchaseButtons.clear();
 
         int x = leftPos + PADDING;
         int y = topPos + 80;
@@ -152,10 +159,42 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
         Component currencyName = Component.translatable(menu.getCurrencyItem().getDescriptionId());
         Component currencyLine = Component.translatable("screen.awesomeshop.shop_block.currency", menu.getCurrencyCount(), currencyName);
-        int centerX = width / 2;
-        int titleY = topPos + PADDING;
+        int centerX = imageWidth / 2;
+        int titleY = PADDING;
         int currencyY = titleY + font.lineHeight + 4;
         graphics.drawCenteredString(font, title, centerX, titleY, 0xFFFFFF);
         graphics.drawCenteredString(font, currencyLine, centerX, currencyY, 0xFFFFFF);
+    }
+
+    @Override
+    public void resize(net.minecraft.client.Minecraft minecraft, int width, int height) {
+        super.resize(minecraft, width, height);
+        lockGuiScale();
+    }
+
+    @Override
+    public void removed() {
+        restoreGuiScale();
+        super.removed();
+    }
+
+    private void lockGuiScale() {
+        if (minecraft == null) {
+            return;
+        }
+        if (originalGuiScale == -1) {
+            originalGuiScale = minecraft.options.guiScale().get();
+            lockedGuiScale = (int) minecraft.getWindow().getGuiScale();
+        }
+        minecraft.options.guiScale().set(lockedGuiScale);
+    }
+
+    private void restoreGuiScale() {
+        if (minecraft == null || originalGuiScale == -1) {
+            return;
+        }
+        minecraft.options.guiScale().set(originalGuiScale);
+        originalGuiScale = -1;
+        lockedGuiScale = -1;
     }
 }
