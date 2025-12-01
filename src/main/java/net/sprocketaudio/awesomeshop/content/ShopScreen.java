@@ -128,6 +128,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics, mouseX, mouseY, partialTick);
         super.render(graphics, mouseX, mouseY, partialTick);
+        renderCurrencyTotals(graphics);
         renderOfferDetails(graphics);
     }
 
@@ -158,15 +159,32 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
 
                 Component eachLine = Component.translatable("screen.awesomeshop.shop_block.price_each_value",
                         requirement.price());
-                int totalCost = requirement.price() * selectedQuantities[index];
-                Component totalLine = Component.translatable("screen.awesomeshop.shop_block.total_and_stored", totalCost,
-                        menu.getCurrencyCount(currency));
-
                 graphics.drawString(font, eachLine, currencyX + 20, currencyY, 0xAAAAAA);
-                graphics.drawString(font, totalLine, currencyX + 20, currencyY + font.lineHeight + 2, 0xAAAAAA);
 
                 currencyY += getCurrencyLineHeight();
             }
+        }
+    }
+
+    private void renderCurrencyTotals(GuiGraphics graphics) {
+        List<ConfiguredCurrency> currencies = menu.getCurrencies();
+        if (currencies.isEmpty()) {
+            return;
+        }
+
+        int currencyX = leftPos + imageWidth - PADDING - 16;
+        int currencyY = topPos + PADDING;
+
+        for (ConfiguredCurrency currency : currencies) {
+            ItemStack currencyStack = new ItemStack(currency.item());
+            graphics.renderItem(currencyStack, currencyX, currencyY);
+            graphics.renderItemDecorations(font, currencyStack, currencyX, currencyY);
+
+            Component totalLine = Component.literal("x " + menu.getCurrencyCount(currency));
+            int textY = currencyY + Math.max(0, (16 - font.lineHeight) / 2);
+            graphics.drawString(font, totalLine, currencyX + 20, textY, 0xFFFFFF);
+
+            currencyY += getCurrencyLineHeight();
         }
     }
 
@@ -240,7 +258,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     }
 
     private int getCurrencyLineHeight() {
-        return (font.lineHeight * 2) + 6;
+        return Math.max(font.lineHeight, 16) + 6;
     }
 
     private int calculateMaxAffordable(ConfiguredOffer offer) {
