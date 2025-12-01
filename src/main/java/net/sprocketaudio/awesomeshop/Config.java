@@ -121,7 +121,29 @@ public class Config {
     }
 
     private static boolean validateOffer(final Object obj) {
-        return obj instanceof String s && parseOffer(s, buildCurrencyLookup(getConfiguredCurrencies())).isPresent();
+        if (!(obj instanceof String raw)) {
+            return false;
+        }
+
+        String[] parts = raw.split("\\|", 3);
+        if (parts.length != 3) {
+            return false;
+        }
+
+        ResourceLocation itemId = ResourceLocation.tryParse(parts[0]);
+        ResourceLocation currencyId = ResourceLocation.tryParse(parts[2]);
+        if (itemId == null || currencyId == null || !BuiltInRegistries.ITEM.containsKey(itemId)
+                || !BuiltInRegistries.ITEM.containsKey(currencyId)) {
+            return false;
+        }
+
+        try {
+            int price = Integer.parseInt(parts[1]);
+            return price > 0;
+        } catch (NumberFormatException ex) {
+            AwesomeShop.LOGGER.warn("Invalid price for shop offer '{}': {}", raw, ex.getMessage());
+            return false;
+        }
     }
 
     private static Optional<ConfiguredCurrency> parseCurrency(String currencyId) {
