@@ -1,13 +1,16 @@
 package net.sprocketaudio.awesomeshop.content;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.IntSupplier;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -15,48 +18,73 @@ import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.sprocketaudio.awesomeshop.AwesomeShop;
 import net.sprocketaudio.awesomeshop.Config;
+import net.sprocketaudio.awesomeshop.Config.ConfiguredCurrency;
 import net.sprocketaudio.awesomeshop.Config.ConfiguredOffer;
 
 public class ShopMenu extends AbstractContainerMenu {
     private final ContainerLevelAccess access;
     private final ShopBlockEntity shop;
     private final List<ConfiguredOffer> offers;
-    private final Item currencyItem;
-
-    private int currencyCount;
+    private final List<ConfiguredCurrency> currencies;
+    private final Map<ResourceLocation, Integer> currencyIndex;
+    private final int[] currencyCounts;
 
     private final IntSupplier offerCountLookup;
 
     public ShopMenu(int id, Inventory inventory, RegistryFriendlyByteBuf data) {
-        this(id, inventory, readShopFromClient(inventory.player.level(), data), readCurrency(data), readOffers(data));
+        this(id, inventory, decodeData(inventory.player.level(), data));
     }
 
     public ShopMenu(int id, Inventory inventory, ShopBlockEntity shop, List<ConfiguredOffer> offers) {
-        this(id, inventory, shop, getCurrencyItem(shop), offers);
+        this(id, inventory, shop, Config.getConfiguredCurrencies(), offers);
     }
 
-    private ShopMenu(int id, Inventory inventory, ShopBlockEntity shop, Item currencyItem, List<ConfiguredOffer> offers) {
+    private ShopMenu(int id, Inventory inventory, MenuData data) {
+        this(id, inventory, data.shop(), data.currencies(), data.offers());
+    }
+
+    private ShopMenu(int id, Inventory inventory, ShopBlockEntity shop, List<ConfiguredCurrency> currencies,
+            List<ConfiguredOffer> offers) {
         super(AwesomeShop.SHOP_MENU.get(), id);
         this.shop = shop;
         this.offers = List.copyOf(offers);
-        this.currencyItem = currencyItem;
+        this.currencies = List.copyOf(currencies);
+        this.currencyIndex = createCurrencyIndex(this.currencies);
+        this.currencyCounts = new int[this.currencies.size()];
         this.access = shop == null ? ContainerLevelAccess.NULL : ContainerLevelAccess.create(shop.getLevel(), shop.getBlockPos());
         this.offerCountLookup = () -> this.offers.size();
 
-        addDataSlot(new DataSlot() {
-            @Override
-            public int get() {
-                return shop != null ? shop.getCurrencyCount() : 0;
-            }
+        for (int i = 0; i < this.currencies.size(); i++) {
+            final int slotIndex = i;
+            addDataSlot(new DataSlot() {
+                @Override
+                public int get() {
+                    if (ShopMenu.this.shop != null) {
+                        return ShopMenu.this.shop.getCurrencyCount(ShopMenu.this.currencies.get(slotIndex));
+                    }
+                    return 0;
+                }
 
-            @Override
-            public void set(int value) {
-                currencyCount = value;
-            }
-        });
+                @Override
+                public void set(int value) {
+                    if (slotIndex < currencyCounts.length) {
+                        currencyCounts[slotIndex] = value;
+                    }
+                }
+            });
+        }
+    }
+
+    private static MenuData decodeData(Level level, RegistryFriendlyByteBuf data) {
+        ShopBlockEntity shop = readShopFromClient(level, data);
+        List<ConfiguredCurrency> currencies = readCurrencies(data);
+        Map<ResourceLocation, ConfiguredCurrency> currencyLookup = buildCurrencyLookup(currencies);
+        List<ConfiguredOffer> offers = readOffers(data, currencyLookup);
+        return new MenuData(shop, currencies, offers);
     }
 
     private static ShopBlockEntity readShopFromClient(Level level, RegistryFriendlyByteBuf data) {
@@ -64,38 +92,73 @@ public class ShopMenu extends AbstractContainerMenu {
         return level.getBlockEntity(pos) instanceof ShopBlockEntity be ? be : null;
     }
 
-    private static Item readCurrency(RegistryFriendlyByteBuf data) {
-        return BuiltInRegistries.ITEM.getOptional(data.readResourceLocation()).orElse(Config.getCurrencyItem());
-    }
-
-    private static List<ConfiguredOffer> readOffers(RegistryFriendlyByteBuf data) {
+    private static List<ConfiguredCurrency> readCurrencies(RegistryFriendlyByteBuf data) {
         return data.readList(buf -> {
-            ItemStack stack = ItemStack.STREAM_CODEC.decode((RegistryFriendlyByteBuf) buf);
-            int price = ((RegistryFriendlyByteBuf) buf).readVarInt();
-            return new ConfiguredOffer(stack, price);
+            ResourceLocation id = buf.readResourceLocation();
+            Item item = BuiltInRegistries.ITEM.getOptional(id).orElse(Items.EMERALD);
+            return new ConfiguredCurrency(id, item);
         });
     }
 
-    private static Item getCurrencyItem(ShopBlockEntity shop) {
-        if (shop != null) {
-            return BuiltInRegistries.ITEM.getOptional(shop.getCurrencyId()).orElse(Config.getCurrencyItem());
+    private static Map<ResourceLocation, ConfiguredCurrency> buildCurrencyLookup(List<ConfiguredCurrency> currencies) {
+        Map<ResourceLocation, ConfiguredCurrency> lookup = new HashMap<>();
+        for (ConfiguredCurrency currency : currencies) {
+            lookup.put(currency.id(), currency);
         }
-        return Config.getCurrencyItem();
+        if (lookup.isEmpty()) {
+            ConfiguredCurrency fallback = new ConfiguredCurrency(ResourceLocation.parse("minecraft:emerald"), Items.EMERALD);
+            lookup.put(fallback.id(), fallback);
+        }
+        return lookup;
+    }
+
+    private static List<ConfiguredOffer> readOffers(RegistryFriendlyByteBuf data,
+            Map<ResourceLocation, ConfiguredCurrency> currencyLookup) {
+        return data.readList(buf -> {
+            ItemStack stack = ItemStack.STREAM_CODEC.decode((RegistryFriendlyByteBuf) buf);
+            int price = ((RegistryFriendlyByteBuf) buf).readVarInt();
+            ResourceLocation currencyId = ((RegistryFriendlyByteBuf) buf).readResourceLocation();
+            ConfiguredCurrency currency = currencyLookup.get(currencyId);
+            if (currency == null) {
+                currency = currencyLookup.values().stream().findFirst()
+                        .orElse(new ConfiguredCurrency(currencyId,
+                                BuiltInRegistries.ITEM.getOptional(currencyId).orElse(Items.EMERALD)));
+            }
+            return new ConfiguredOffer(stack, price, currency);
+        });
+    }
+
+    private static Map<ResourceLocation, Integer> createCurrencyIndex(List<ConfiguredCurrency> currencies) {
+        Map<ResourceLocation, Integer> lookup = new HashMap<>();
+        for (int i = 0; i < currencies.size(); i++) {
+            lookup.put(currencies.get(i).id(), i);
+        }
+        return lookup;
+    }
+
+    private record MenuData(ShopBlockEntity shop, List<ConfiguredCurrency> currencies, List<ConfiguredOffer> offers) {
     }
 
     public List<ConfiguredOffer> getOffers() {
         return offers;
     }
 
-    public Item getCurrencyItem() {
-        return currencyItem;
+    public List<ConfiguredCurrency> getCurrencies() {
+        return currencies;
     }
 
-    public int getCurrencyCount() {
-        if (shop != null && shop.getLevel() != null && !shop.getLevel().isClientSide) {
-            return shop.getCurrencyCount();
+    public int getCurrencyCount(ConfiguredCurrency currency) {
+        Integer index = currencyIndex.get(currency.id());
+        if (index == null) {
+            return 0;
         }
-        return currencyCount;
+        if (shop != null && shop.getLevel() != null && !shop.getLevel().isClientSide) {
+            return shop.getCurrencyCount(currency);
+        }
+        if (index >= 0 && index < currencyCounts.length) {
+            return currencyCounts[index];
+        }
+        return 0;
     }
 
     public int getPriceForOffer(ConfiguredOffer offer) {
@@ -125,7 +188,7 @@ public class ShopMenu extends AbstractContainerMenu {
             player.displayClientMessage(Config.purchaseSuccessMessage(offer.item(), quantity), true);
         } else {
             int totalCost = offer.price() * quantity;
-            player.displayClientMessage(Config.purchaseFailureMessage(offer.item(), shop.getCurrencyItem(), totalCost), true);
+            player.displayClientMessage(Config.purchaseFailureMessage(offer.item(), offer.currency().item(), totalCost), true);
         }
         return true;
     }
@@ -142,10 +205,12 @@ public class ShopMenu extends AbstractContainerMenu {
 
     public static void writeScreenData(ShopBlockEntity shop, RegistryFriendlyByteBuf buffer) {
         buffer.writeBlockPos(Objects.requireNonNull(shop).getBlockPos());
-        buffer.writeResourceLocation(shop.getCurrencyId());
+        List<ConfiguredCurrency> currencies = Config.getConfiguredCurrencies();
+        buffer.writeCollection(currencies, (buf, currency) -> buf.writeResourceLocation(currency.id()));
         buffer.writeCollection(new ArrayList<>(Config.getConfiguredOffers()), (buf, offer) -> {
             ItemStack.STREAM_CODEC.encode((RegistryFriendlyByteBuf) buf, offer.item());
             ((RegistryFriendlyByteBuf) buf).writeVarInt(offer.price());
+            ((RegistryFriendlyByteBuf) buf).writeResourceLocation(offer.currency().id());
         });
     }
 }
