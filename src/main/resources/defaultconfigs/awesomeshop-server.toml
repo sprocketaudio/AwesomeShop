@@ -1,0 +1,13 @@
+# Server configuration for AwesomeShop.
+# This file will be copied to the server config directory if it doesn't exist.
+
+# Item used as currency for all shop transactions.
+currencyItem = "minecraft:emerald"
+
+# Items that can be purchased from the shop block along with their prices.
+# Format: namespace:item|price
+# Example: minecraft:apple|2
+shopOffers = [
+    "minecraft:apple|1",
+    "minecraft:bread|2"
+]

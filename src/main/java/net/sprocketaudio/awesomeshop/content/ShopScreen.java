@@ -13,8 +13,10 @@ import net.sprocketaudio.awesomeshop.Config.ConfiguredOffer;
 
 public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private static final int PADDING = 8;
-    private static final int ROW_HEIGHT = 32;
-    private static final int BUTTON_HEIGHT = 20;
+    private static final int ROW_HEIGHT = 36;
+    private static final int BUTTON_WIDTH = 18;
+    private static final int BUTTON_HEIGHT = 14;
+    private static final int BUTTON_GAP = 2;
     private static final int PURCHASE_BUTTON_WIDTH = 100;
 
     private final int[] selectedQuantities;
@@ -23,8 +25,8 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     public ShopScreen(ShopMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
         this.selectedQuantities = new int[menu.getOffers().size()];
-        this.imageWidth = 300;
-        this.imageHeight = 60 + (menu.getOffers().size() * ROW_HEIGHT) + 20;
+        this.imageWidth = 360;
+        this.imageHeight = 80 + (menu.getOffers().size() * ROW_HEIGHT) + 20;
     }
 
     @Override
@@ -33,19 +35,23 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         clearWidgets();
 
         int x = leftPos + PADDING;
-        int y = topPos + 60;
+        int y = topPos + 80;
 
         List<ConfiguredOffer> offers = menu.getOffers();
         for (int i = 0; i < offers.size(); i++) {
             ConfiguredOffer offer = offers.get(i);
             int buttonIndex = i;
             int rowY = y + i * ROW_HEIGHT;
-            addRenderableWidget(Button.builder(Component.literal("-"), b -> adjustQuantity(buttonIndex, -1))
-                    .bounds(x, rowY, 20, BUTTON_HEIGHT)
-                    .build());
+            int quantityButtonX = leftPos + imageWidth - PADDING - PURCHASE_BUTTON_WIDTH - BUTTON_WIDTH - 6;
+            int plusY = rowY + 2;
+            int minusY = plusY + BUTTON_HEIGHT + BUTTON_GAP;
 
             addRenderableWidget(Button.builder(Component.literal("+"), b -> adjustQuantity(buttonIndex, 1))
-                    .bounds(x + 64, rowY, 20, BUTTON_HEIGHT)
+                    .bounds(quantityButtonX, plusY, BUTTON_WIDTH, BUTTON_HEIGHT)
+                    .build());
+
+            addRenderableWidget(Button.builder(Component.literal("-"), b -> adjustQuantity(buttonIndex, -1))
+                    .bounds(quantityButtonX, minusY, BUTTON_WIDTH, BUTTON_HEIGHT)
                     .build());
 
             Button purchaseButton = Button.builder(Component.literal(""), b -> purchaseOffer(buttonIndex))
@@ -117,7 +123,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private void renderOfferDetails(GuiGraphics graphics) {
         List<ConfiguredOffer> offers = menu.getOffers();
         Component currencyName = Component.translatable(menu.getCurrencyItem().getDescriptionId());
-        int y = topPos + 60;
+        int y = topPos + 80;
 
         for (int i = 0; i < offers.size(); i++) {
             ConfiguredOffer offer = offers.get(i);
@@ -130,13 +136,15 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
 
             graphics.renderItem(offer.item(), leftPos + PADDING, baseY + 2);
             graphics.renderItemDecorations(font, offer.item(), leftPos + PADDING, baseY + 2);
-            graphics.drawString(font, itemName, leftPos + PADDING + 24, baseY + 6, 0xFFFFFF);
-            graphics.drawString(font, priceLine, leftPos + PADDING + 100, baseY + 2, 0xAAAAAA);
-            graphics.drawString(font, totalLine, leftPos + PADDING + 100, baseY + 2 + font.lineHeight + 2, 0xAAAAAA);
+            graphics.drawString(font, itemName, leftPos + PADDING + 24, baseY + 4, 0xFFFFFF);
+            int priceX = leftPos + PADDING + 120;
+            graphics.drawString(font, priceLine, priceX, baseY + 2, 0xAAAAAA);
+            graphics.drawString(font, totalLine, priceX, baseY + 2 + font.lineHeight + 2, 0xAAAAAA);
 
             Component quantityLine = Component.translatable("screen.awesomeshop.shop_block.quantity", selectedQuantities[i]);
-            graphics.drawString(font, quantityLine, leftPos + PADDING + 24,
-                    baseY + 6 + font.lineHeight + 2, 0xFFFFFF);
+            int quantityTextX = leftPos + imageWidth - PADDING - PURCHASE_BUTTON_WIDTH - BUTTON_WIDTH - 6 + BUTTON_WIDTH + 4;
+            graphics.drawString(font, quantityLine, quantityTextX,
+                    baseY + 4 + font.lineHeight + 2, 0xFFFFFF);
         }
     }
 
@@ -144,9 +152,9 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
         Component currencyName = Component.translatable(menu.getCurrencyItem().getDescriptionId());
         Component currencyLine = Component.translatable("screen.awesomeshop.shop_block.currency", menu.getCurrencyCount(), currencyName);
-        int centerX = leftPos + (imageWidth / 2);
+        int centerX = width / 2;
         int titleY = topPos + PADDING;
-        int currencyY = titleY + font.lineHeight + 2;
+        int currencyY = titleY + font.lineHeight + 4;
         graphics.drawCenteredString(font, title, centerX, titleY, 0xFFFFFF);
         graphics.drawCenteredString(font, currencyLine, centerX, currencyY, 0xFFFFFF);
     }
