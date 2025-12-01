@@ -1,6 +1,7 @@
 package net.sprocketaudio.awesomeshop.content;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +36,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     public ShopScreen(ShopMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
         this.selectedQuantities = new int[menu.getOffers().size()];
+        Arrays.fill(this.selectedQuantities, 1);
         this.imageWidth = 360;
         this.imageHeight = calculateImageHeight();
     }
@@ -82,8 +84,10 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             }
             int buttonId = (quantity * menu.getOffers().size()) + index;
             minecraft.gameMode.handleInventoryButtonClick(menu.containerId, buttonId);
-            selectedQuantities[index] = 0;
-            updatePurchaseButton(index);
+            ConfiguredOffer offer = menu.getOffers().get(index);
+            int maxAffordable = calculateMaxAffordable(offer);
+            selectedQuantities[index] = Math.min(Math.max(1, quantity), maxAffordable);
+            adjustQuantity(index, 0);
         }
     }
 
@@ -95,7 +99,8 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
 
         ConfiguredOffer offer = offers.get(index);
         int maxAffordable = calculateMaxAffordable(offer);
-        int newQuantity = Mth.clamp(selectedQuantities[index] + delta, 0, maxAffordable);
+        int minQuantity = maxAffordable > 0 ? 1 : 0;
+        int newQuantity = Mth.clamp(selectedQuantities[index] + delta, minQuantity, maxAffordable);
         selectedQuantities[index] = newQuantity;
         updatePurchaseButton(index);
     }
@@ -152,14 +157,15 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             for (PriceRequirement requirement : offer.prices()) {
                 ConfiguredCurrency currency = requirement.currency();
                 int currencyX = leftPos + PADDING + 120;
+                int quantity = selectedQuantities[index];
+                int totalPrice = quantity * requirement.price();
 
                 ItemStack currencyStack = new ItemStack(currency.item());
                 graphics.renderItem(currencyStack, currencyX, currencyY);
                 graphics.renderItemDecorations(font, currencyStack, currencyX, currencyY);
 
-                Component eachLine = Component.translatable("screen.awesomeshop.shop_block.price_each_value",
-                        requirement.price());
-                graphics.drawString(font, eachLine, currencyX + 20, currencyY, 0xAAAAAA);
+                Component totalLine = Component.literal("x " + totalPrice);
+                graphics.drawString(font, totalLine, currencyX + 20, currencyY, 0xAAAAAA);
 
                 currencyY += getCurrencyLineHeight();
             }
@@ -172,8 +178,8 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             return;
         }
 
-        int currencyX = leftPos + imageWidth - PADDING - 16;
-        int currencyY = topPos + PADDING;
+        int currencyX = this.width - PADDING - 16;
+        int currencyY = PADDING;
 
         for (ConfiguredCurrency currency : currencies) {
             ItemStack currencyStack = new ItemStack(currency.item());
