@@ -178,17 +178,20 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             return;
         }
 
-        int currencyX = leftPos + imageWidth - PADDING - 16;
         int currencyY = PADDING;
 
         for (ConfiguredCurrency currency : currencies) {
             ItemStack currencyStack = new ItemStack(currency.item());
+            Component totalLine = Component.literal("x " + menu.getCurrencyCount(currency));
+            int lineWidth = 16 + 4 + font.width(totalLine);
+            int currencyX = leftPos + imageWidth - PADDING - 4 - lineWidth;
+            int textX = currencyX + 16 + 4;
+
             graphics.renderItem(currencyStack, currencyX, currencyY);
             graphics.renderItemDecorations(font, currencyStack, currencyX, currencyY);
 
-            Component totalLine = Component.literal("x " + menu.getCurrencyCount(currency));
             int textY = currencyY + Math.max(0, (16 - font.lineHeight) / 2);
-            graphics.drawString(font, totalLine, currencyX + 20, textY, 0xFFFFFF);
+            graphics.drawString(font, totalLine, textX, textY, 0xFFFFFF);
 
             currencyY += getCurrencyLineHeight();
         }
