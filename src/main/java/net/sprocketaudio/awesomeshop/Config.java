@@ -1,6 +1,7 @@
 package net.sprocketaudio.awesomeshop;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -104,6 +105,17 @@ public class Config {
     public static Component purchaseFailureMessage(ItemStack offer, ConfiguredOffer configuredOffer) {
         return Component.translatable("block.awesomeshop.shop_block.failed", offer.getHoverName(),
                 formatPriceList(configuredOffer));
+    }
+
+    public static Map<ConfiguredCurrency, Integer> aggregatePriceRequirements(List<PriceRequirement> prices) {
+        Map<ConfiguredCurrency, Integer> totals = new LinkedHashMap<>();
+        for (PriceRequirement price : prices) {
+            if (price.price() <= 0) {
+                continue;
+            }
+            totals.merge(price.currency(), price.price(), Integer::sum);
+        }
+        return Collections.unmodifiableMap(totals);
     }
 
     public static class ConfiguredOffer {
@@ -302,9 +314,9 @@ public class Config {
     }
 
     private static Component formatPriceList(ConfiguredOffer offer) {
-        return Component.literal(offer.prices().stream()
-                .map(price -> Component.translatable("block.awesomeshop.shop_block.price_entry", price.price(),
-                        Component.translatable(price.currency().item().getDescriptionId())).getString())
+        return Component.literal(aggregatePriceRequirements(offer.prices()).entrySet().stream()
+                .map(entry -> Component.translatable("block.awesomeshop.shop_block.price_entry", entry.getValue(),
+                        Component.translatable(entry.getKey().item().getDescriptionId())).getString())
                 .collect(Collectors.joining(", ")));
     }
 }

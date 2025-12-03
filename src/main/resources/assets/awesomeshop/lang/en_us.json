@@ -7,10 +7,10 @@
   "screen.awesomeshop.shop_block.buy": "Buy %2$s x %1$s",
   "screen.awesomeshop.shop_block.currency": "Stored currency: %1$s x %2$s",
   "screen.awesomeshop.shop_block.currency_section": "Currency: %2$s (stored: %1$s)",
-  "screen.awesomeshop.shop_block.price_each": "Price: %1$s x %2$s each",
-  "screen.awesomeshop.shop_block.total_price": "Total: %1$s x %2$s",
+  "screen.awesomeshop.shop_block.price_each": "Price: %1$s %2$s each",
+  "screen.awesomeshop.shop_block.total_price": "Total: %1$s %2$s",
   "screen.awesomeshop.shop_block.quantity": "Selected: %1$s",
-  "screen.awesomeshop.shop_block.price_each_value": "x%1$s each",
-  "screen.awesomeshop.shop_block.total_and_stored": "Total: x%1$s (stored: %2$s)",
-  "block.awesomeshop.shop_block.price_entry": "%1$s x %2$s"
+  "screen.awesomeshop.shop_block.price_each_value": "%1$s each",
+  "screen.awesomeshop.shop_block.total_and_stored": "Total: %1$s (stored: %2$s)",
+  "block.awesomeshop.shop_block.price_entry": "%1$s %2$s"
 }

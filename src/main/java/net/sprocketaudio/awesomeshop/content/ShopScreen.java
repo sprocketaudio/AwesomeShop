@@ -14,6 +14,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
+import net.sprocketaudio.awesomeshop.Config;
 import net.sprocketaudio.awesomeshop.Config.ConfiguredCurrency;
 import net.sprocketaudio.awesomeshop.Config.ConfiguredOffer;
 import net.sprocketaudio.awesomeshop.Config.PriceRequirement;
@@ -44,7 +45,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private static final int CARD_FILL_COLOR = 0xEE161616;
     private static final int BUTTON_BASE_COLOR = 0xFF6E6E6E;
     private static final int BUTTON_HOVER_COLOR = 0xFF858585;
-    private static final int CURRENCY_GAP = 10;
+    private static final int CURRENCY_GAP = 8;
     private static final int ITEM_ICON_SIZE = 24;
 
     private int lockedGuiScale = -1;
@@ -294,17 +295,22 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             int currencyStartX = cardCenterX - (totalCurrencyWidth / 2);
             int currentX = currencyStartX;
 
+            List<Integer> currencyCenters = new ArrayList<>(requirements.size());
             for (PriceRequirement requirement : requirements) {
                 ItemStack currencyStack = new ItemStack(requirement.currency().item());
                 graphics.renderItem(currencyStack, currentX, currenciesY);
                 graphics.renderItemDecorations(font, currencyStack, currentX, currenciesY);
+                currencyCenters.add(currentX + 8);
                 currentX += 16 + CURRENCY_GAP;
             }
 
             int quantity = selectedQuantities[index];
-            Component priceLine = buildPriceLine(requirements, quantity);
             int priceY = getPriceRowY(cardY);
-            graphics.drawCenteredString(font, priceLine, cardCenterX, priceY, 0xDDDDDD);
+            for (int i = 0; i < requirements.size(); i++) {
+                PriceRequirement requirement = requirements.get(i);
+                String costText = Integer.toString(quantity * requirement.price());
+                graphics.drawCenteredString(font, Component.literal(costText), currencyCenters.get(i), priceY, 0xDDDDDD);
+            }
         }
     }
 
@@ -456,18 +462,6 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         return total;
     }
 
-    private Component buildPriceLine(List<PriceRequirement> requirements, int quantity) {
-        StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < requirements.size(); i++) {
-            PriceRequirement requirement = requirements.get(i);
-            builder.append("x ").append(quantity * requirement.price());
-            if (i < requirements.size() - 1) {
-                builder.append("  |  ");
-            }
-        }
-        return Component.literal(builder.toString());
-    }
-
     private int getColumns() {
         int contentWidth = getShopColumnWidth() - (PADDING * 2);
         return Math.max(1, (contentWidth + GRID_GAP) / (CARD_WIDTH + GRID_GAP));
@@ -479,12 +473,12 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
 
     private int calculateMaxAffordable(ConfiguredOffer offer) {
         int maxAffordable = Integer.MAX_VALUE;
-        for (PriceRequirement requirement : offer.prices()) {
-            int priceEach = requirement.price();
+        for (Map.Entry<ConfiguredCurrency, Integer> entry : Config.aggregatePriceRequirements(offer.prices()).entrySet()) {
+            int priceEach = entry.getValue();
             if (priceEach <= 0) {
                 continue;
             }
-            int available = menu.getCurrencyCount(requirement.currency());
+            int available = menu.getCurrencyCount(entry.getKey());
             maxAffordable = Math.min(maxAffordable, available / priceEach);
         }
         if (maxAffordable == Integer.MAX_VALUE) {
