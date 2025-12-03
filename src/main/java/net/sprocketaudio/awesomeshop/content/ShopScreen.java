@@ -47,16 +47,25 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private static final int BUTTON_HOVER_COLOR = 0xFF858585;
     private static final int CURRENCY_GAP = 8;
     private static final int ITEM_ICON_SIZE = 24;
+    private static final int SCROLLBAR_WIDTH = 8;
+    private static final int SCROLLBAR_MARGIN = 6;
+    private static final int MIN_SCROLLBAR_HEIGHT = 12;
+    private static final double SCROLL_SPEED = 12.0d;
 
     private int lockedGuiScale = -1;
     private int originalGuiScale = -1;
 
     private final int[] selectedQuantities;
     private final Map<Integer, Button> purchaseButtons = new HashMap<>();
+    private final List<Button> offerButtons = new ArrayList<>();
     private final Map<String, Button> categoryButtons = new HashMap<>();
     private final List<String> categories;
     private String selectedCategory;
     private List<OfferCard> cards = List.of();
+    private double scrollOffset;
+    private double maxScroll;
+    private double categoryScrollOffset;
+    private double categoryMaxScroll;
 
     public ShopScreen(ShopMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
@@ -91,17 +100,20 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private void rebuildLayout() {
         clearWidgets();
         purchaseButtons.clear();
+        offerButtons.clear();
         categoryButtons.clear();
 
         if (!categories.contains(selectedCategory) && !categories.isEmpty()) {
             selectedCategory = categories.get(0);
         }
 
-        this.cards = buildCards();
+        int contentHeight = calculateContentHeight();
         int maxHeight = this.height - (PADDING * 2);
         int targetHeight = (int) (this.height * GUI_HEIGHT_RATIO);
-        this.imageHeight = Mth.clamp(Math.max(calculateImageHeight(), targetHeight), 140, maxHeight);
+        this.imageHeight = Mth.clamp(Math.min(calculateImageHeight(contentHeight), targetHeight), 140, maxHeight);
         this.topPos = Math.max(PADDING, (this.height - this.imageHeight) / 2);
+        updateScrollBounds(contentHeight);
+        updateCategoryScrollBounds();
         this.cards = buildCards();
 
         placeCategoryButtons();
@@ -115,25 +127,33 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             int quantityButtonY = priceRowY - Math.max(0, (BUTTON_HEIGHT - font.lineHeight) / 2) - 1;
             int minusX = card.startX() + CARD_PADDING;
             int plusX = card.startX() + CARD_WIDTH - CARD_PADDING - BUTTON_WIDTH;
+            boolean visible = isCardVisible(card);
 
-            addRenderableWidget(createTintedButton(minusX, quantityButtonY, BUTTON_WIDTH, BUTTON_HEIGHT, Component.literal("-"),
-                    b -> adjustQuantity(index, -1)));
+            Button minusButton = createTintedButton(minusX, quantityButtonY, BUTTON_WIDTH, BUTTON_HEIGHT, Component.literal("-"),
+                    b -> adjustQuantity(index, -1));
+            minusButton.visible = visible;
+            offerButtons.add(addRenderableWidget(minusButton));
 
-            addRenderableWidget(createTintedButton(plusX, quantityButtonY, BUTTON_WIDTH, BUTTON_HEIGHT, Component.literal("+"),
-                    b -> adjustQuantity(index, 1)));
+            Button plusButton = createTintedButton(plusX, quantityButtonY, BUTTON_WIDTH, BUTTON_HEIGHT, Component.literal("+"),
+                    b -> adjustQuantity(index, 1));
+            plusButton.visible = visible;
+            offerButtons.add(addRenderableWidget(plusButton));
 
             int purchaseY = quantityButtonY + BUTTON_HEIGHT + BUTTON_GAP;
             Button purchaseButton = createTintedButton(card.startX() + CARD_PADDING, purchaseY, CARD_WIDTH - (CARD_PADDING * 2),
                     BUTTON_HEIGHT, Component.literal(""), b -> purchaseOffer(index));
-            purchaseButtons.put(index, addRenderableWidget(purchaseButton));
+            purchaseButton.visible = visible;
+            Button widget = addRenderableWidget(purchaseButton);
+            purchaseButtons.put(index, widget);
+            offerButtons.add(widget);
             updatePurchaseButton(index);
         }
     }
 
     private void placeCategoryButtons() {
-        int buttonWidth = getCategoryColumnWidth() - (PADDING * 2);
+        int buttonWidth = getCategoryButtonWidth();
         int startX = leftPos + PADDING;
-        int startY = getCategoryButtonsStartY();
+        int startY = getCategoryButtonsStartY() - (int) categoryScrollOffset;
 
         for (String category : categories) {
             Button button = createCategoryButton(startX, startY, buttonWidth, CATEGORY_BUTTON_HEIGHT, category,
@@ -176,6 +196,8 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private void selectCategory(String category) {
         if (!Objects.equals(selectedCategory, category) && categories.contains(category)) {
             selectedCategory = category;
+            scrollOffset = 0;
+            categoryScrollOffset = 0;
             rebuildLayout();
         }
     }
@@ -219,6 +241,10 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderPanels(graphics);
         renderOfferDetails(graphics);
+        renderScrollbar(graphics);
+        renderCategoryScrollbar(graphics);
+        refreshOfferButtonVisibility();
+        refreshCategoryButtonVisibility();
         super.render(graphics, mouseX, mouseY, partialTick);
         renderCategoryPanel(graphics);
         renderCurrencyTotals(graphics);
@@ -256,7 +282,63 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         graphics.drawString(font, Component.literal("Categories"), titleX, titleY, 0xFFFFFF);
     }
 
+    private void renderScrollbar(GuiGraphics graphics) {
+        if (maxScroll <= 0) {
+            return;
+        }
+
+        int contentHeight = calculateContentHeight();
+        int visibleHeight = getVisibleOffersHeight();
+        if (visibleHeight <= 0 || contentHeight <= 0) {
+            return;
+        }
+
+        int barX = leftPos + imageWidth - PADDING - SCROLLBAR_WIDTH;
+        int barTop = getOffersStartY();
+        int barBottom = topPos + imageHeight - PADDING;
+        int trackHeight = barBottom - barTop;
+
+        graphics.fill(barX, barTop, barX + SCROLLBAR_WIDTH, barBottom, 0x66000000);
+
+        int thumbHeight = Math.max(MIN_SCROLLBAR_HEIGHT, (int) ((visibleHeight / (double) contentHeight) * trackHeight));
+        thumbHeight = Math.min(thumbHeight, trackHeight);
+        int thumbAvailable = trackHeight - thumbHeight;
+        int thumbOffset = maxScroll == 0 ? 0 : (int) ((scrollOffset / maxScroll) * thumbAvailable);
+        int thumbTop = barTop + thumbOffset;
+        graphics.fill(barX, thumbTop, barX + SCROLLBAR_WIDTH, thumbTop + thumbHeight, BUTTON_HOVER_COLOR);
+    }
+
+    private void renderCategoryScrollbar(GuiGraphics graphics) {
+        if (categoryMaxScroll <= 0) {
+            return;
+        }
+
+        int contentHeight = calculateCategoryContentHeight();
+        int visibleHeight = getVisibleCategoryHeight();
+        if (visibleHeight <= 0 || contentHeight <= 0) {
+            return;
+        }
+
+        int barX = leftPos + getCategoryColumnWidth() - PADDING - SCROLLBAR_WIDTH;
+        int barTop = getCategoryButtonsStartY();
+        int barBottom = topPos + imageHeight - PADDING;
+        int trackHeight = barBottom - barTop;
+
+        graphics.fill(barX, barTop, barX + SCROLLBAR_WIDTH, barBottom, 0x66000000);
+
+        int thumbHeight = Math.max(MIN_SCROLLBAR_HEIGHT, (int) ((visibleHeight / (double) contentHeight) * trackHeight));
+        thumbHeight = Math.min(thumbHeight, trackHeight);
+        int thumbAvailable = trackHeight - thumbHeight;
+        int thumbOffset = categoryMaxScroll == 0 ? 0 : (int) ((categoryScrollOffset / categoryMaxScroll) * thumbAvailable);
+        int thumbTop = barTop + thumbOffset;
+        graphics.fill(barX, thumbTop, barX + SCROLLBAR_WIDTH, thumbTop + thumbHeight, BUTTON_HOVER_COLOR);
+    }
+
     private void renderOfferDetails(GuiGraphics graphics) {
+        if (maxScroll > 0) {
+            graphics.enableScissor(getShopColumnLeft(), getOffersStartY(), leftPos + imageWidth - PADDING, topPos + imageHeight - PADDING);
+        }
+
         List<ConfiguredOffer> offers = menu.getOffers();
         for (OfferCard card : cards) {
             int index = card.offerIndex();
@@ -312,6 +394,10 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
                 graphics.drawCenteredString(font, Component.literal(costText), currencyCenters.get(i), priceY, 0xDDDDDD);
             }
         }
+
+        if (maxScroll > 0) {
+            graphics.disableScissor();
+        }
     }
 
     private void renderCurrencyTotals(GuiGraphics graphics) {
@@ -339,6 +425,45 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
 
             currentX += lineWidth + CURRENCY_GAP;
         }
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double deltaX, double deltaY) {
+        if (isWithinCategoryColumn(mouseX, mouseY)) {
+            setCategoryScrollOffset(categoryScrollOffset - (deltaY * SCROLL_SPEED));
+            return true;
+        }
+
+        setScrollOffset(scrollOffset - (deltaY * SCROLL_SPEED));
+        return super.mouseScrolled(mouseX, mouseY, deltaX, deltaY);
+    }
+
+    private void setScrollOffset(double offset) {
+        double clamped = Mth.clamp(offset, 0, maxScroll);
+        if (clamped != scrollOffset) {
+            scrollOffset = clamped;
+            rebuildLayout();
+        }
+    }
+
+    private void setCategoryScrollOffset(double offset) {
+        double clamped = Mth.clamp(offset, 0, categoryMaxScroll);
+        if (clamped != categoryScrollOffset) {
+            categoryScrollOffset = clamped;
+            rebuildLayout();
+        }
+    }
+
+    private int getVisibleOffersHeight() {
+        int offersTop = getOffersStartY();
+        int offersBottom = topPos + imageHeight - PADDING;
+        return Math.max(0, offersBottom - offersTop);
+    }
+
+    private int getVisibleCategoryHeight() {
+        int categoryTop = getCategoryButtonsStartY();
+        int categoryBottom = topPos + imageHeight - PADDING;
+        return Math.max(0, categoryBottom - categoryTop);
     }
 
     @Override
@@ -383,15 +508,12 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     }
 
     private int calculateImageHeight() {
-        int offersTop = getOffersStartY();
-        int columns = Math.max(1, getColumns());
-        int rowCount = (int) Math.ceil((double) cards.size() / columns);
-        int height = offersTop - topPos;
-        if (rowCount > 0) {
-            height += rowCount * CARD_HEIGHT;
-            height += (rowCount - 1) * GRID_GAP;
-        }
-        height += PADDING;
+        return calculateImageHeight(calculateContentHeight());
+    }
+
+    private int calculateImageHeight(int contentHeight) {
+        int headerHeight = PADDING + font.lineHeight + CATEGORY_TITLE_GAP + CATEGORY_BUTTON_Y_OFFSET;
+        int height = headerHeight + contentHeight + PADDING;
         return Math.max(height, 140);
     }
 
@@ -401,6 +523,14 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
 
     private int getCategoryColumnWidth() {
         return Math.max((int) (imageWidth * CATEGORY_COLUMN_RATIO), 140);
+    }
+
+    private int getCategoryButtonWidth() {
+        int buttonWidth = getCategoryColumnWidth() - (PADDING * 2);
+        if (categoryMaxScroll > 0) {
+            buttonWidth -= SCROLLBAR_WIDTH + SCROLLBAR_MARGIN;
+        }
+        return buttonWidth;
     }
 
     private int getShopColumnLeft() {
@@ -419,7 +549,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         List<OfferCard> result = new ArrayList<>();
         int contentLeft = getShopColumnLeft() + PADDING;
         int currentX = contentLeft;
-        int currentY = getOffersStartY();
+        int currentY = getOffersStartY() - (int) scrollOffset;
         int columns = Math.max(1, getColumns());
         int columnIndex = 0;
 
@@ -442,11 +572,104 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         return result;
     }
 
+    private int calculateContentHeight() {
+        int offerCount = 0;
+        for (ConfiguredOffer offer : menu.getOffers()) {
+            if (Objects.equals(offer.category(), selectedCategory)) {
+                offerCount++;
+            }
+        }
+        int columns = Math.max(1, getColumns());
+        int rows = (int) Math.ceil((double) offerCount / columns);
+        if (rows == 0) {
+            return 0;
+        }
+        return (rows * CARD_HEIGHT) + ((rows - 1) * GRID_GAP);
+    }
+
+    private void updateScrollBounds(int contentHeight) {
+        int visibleHeight = getVisibleOffersHeight();
+        maxScroll = Math.max(0, contentHeight - visibleHeight);
+        scrollOffset = Mth.clamp(scrollOffset, 0, maxScroll);
+    }
+
+    private void updateCategoryScrollBounds() {
+        int contentHeight = calculateCategoryContentHeight();
+        int visibleHeight = getVisibleCategoryHeight();
+        categoryMaxScroll = Math.max(0, contentHeight - visibleHeight);
+        categoryScrollOffset = Mth.clamp(categoryScrollOffset, 0, categoryMaxScroll);
+    }
+
+    private int calculateCategoryContentHeight() {
+        if (categories.isEmpty()) {
+            return 0;
+        }
+        return (categories.size() * CATEGORY_BUTTON_HEIGHT) + ((categories.size() - 1) * BUTTON_GAP);
+    }
+
     private int calculateCurrencyRowWidth(List<PriceRequirement> requirements) {
         if (requirements.isEmpty()) {
             return 0;
         }
         return (requirements.size() * 16) + ((requirements.size() - 1) * CURRENCY_GAP);
+    }
+
+    private boolean isCardVisible(OfferCard card) {
+        int cardTop = card.startY();
+        int cardBottom = cardTop + CARD_HEIGHT;
+        int offersTop = getOffersStartY();
+        int offersBottom = topPos + imageHeight - PADDING;
+        return cardBottom > offersTop && cardTop < offersBottom;
+    }
+
+    private void refreshOfferButtonVisibility() {
+        for (Button button : offerButtons) {
+            button.visible = isWithinOffersViewport(button);
+        }
+    }
+
+    private void refreshCategoryButtonVisibility() {
+        for (Button button : categoryButtons.values()) {
+            button.visible = isWithinCategoryViewport(button);
+        }
+    }
+
+    private boolean isWithinOffersViewport(Button button) {
+        return isWithinOffersViewport(button.getX(), button.getY(), button.getWidth(), button.getHeight());
+    }
+
+    private boolean isWithinOffersViewport(int x, int y, int width, int height) {
+        int viewportLeft = getShopColumnLeft();
+        int viewportRight = leftPos + imageWidth - PADDING;
+        int viewportTop = getOffersStartY();
+        int viewportBottom = topPos + imageHeight - PADDING;
+
+        int right = x + width;
+        int bottom = y + height;
+        return right > viewportLeft && x < viewportRight && bottom > viewportTop && y < viewportBottom;
+    }
+
+    private boolean isWithinCategoryViewport(Button button) {
+        return isWithinCategoryViewport(button.getX(), button.getY(), button.getWidth(), button.getHeight());
+    }
+
+    private boolean isWithinCategoryViewport(int x, int y, int width, int height) {
+        int viewportLeft = leftPos + PADDING;
+        int viewportRight = leftPos + getCategoryColumnWidth() - PADDING;
+        int viewportTop = getCategoryButtonsStartY();
+        int viewportBottom = topPos + imageHeight - PADDING;
+
+        int right = x + width;
+        int bottom = y + height;
+        return right > viewportLeft && x < viewportRight && bottom > viewportTop && y < viewportBottom;
+    }
+
+    private boolean isWithinCategoryColumn(double mouseX, double mouseY) {
+        int columnLeft = leftPos;
+        int columnRight = leftPos + getCategoryColumnWidth();
+        int columnTop = topPos;
+        int columnBottom = topPos + imageHeight;
+        return mouseX >= columnLeft && mouseX <= columnRight && mouseY >= columnTop && mouseY <= columnBottom;
     }
 
     private int calculateCurrencyTotalsWidth(List<ConfiguredCurrency> currencies) {
@@ -463,7 +686,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     }
 
     private int getColumns() {
-        int contentWidth = getShopColumnWidth() - (PADDING * 2);
+        int contentWidth = getShopColumnWidth() - (PADDING * 2) - SCROLLBAR_WIDTH - SCROLLBAR_MARGIN;
         return Math.max(1, (contentWidth + GRID_GAP) / (CARD_WIDTH + GRID_GAP));
     }
 
@@ -494,11 +717,28 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
 
         @Override
         public void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            if (!isWithinOffersViewport(this)) {
+                return;
+            }
+
+            int viewportLeft = getShopColumnLeft();
+            int viewportRight = leftPos + imageWidth - PADDING;
+            int viewportTop = getOffersStartY();
+            int viewportBottom = topPos + imageHeight - PADDING;
+
+            graphics.enableScissor(viewportLeft, viewportTop, viewportRight, viewportBottom);
             int background = isHoveredOrFocused() ? BUTTON_HOVER_COLOR : BUTTON_BASE_COLOR;
             graphics.fill(getX(), getY(), getX() + width, getY() + height, background);
             int textY = getY() + (height - font.lineHeight) / 2;
             int textColor = active ? 0xFFFFFFFF : 0xFFB5B5B5;
             graphics.drawCenteredString(font, getMessage(), getX() + (width / 2), textY, textColor);
+            graphics.disableScissor();
+        }
+
+        @Override
+        public boolean isMouseOver(double mouseX, double mouseY) {
+            return super.isMouseOver(mouseX, mouseY)
+                    && isWithinOffersViewport((int) mouseX, (int) mouseY, 1, 1);
         }
     }
 
@@ -517,6 +757,16 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
 
         @Override
         public void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            if (!isWithinCategoryViewport(this)) {
+                return;
+            }
+
+            int viewportLeft = leftPos + PADDING;
+            int viewportRight = leftPos + getCategoryColumnWidth() - PADDING;
+            int viewportTop = getCategoryButtonsStartY();
+            int viewportBottom = topPos + imageHeight - PADDING;
+
+            graphics.enableScissor(viewportLeft, viewportTop, viewportRight, viewportBottom);
             int background = isHoveredOrFocused() ? BUTTON_HOVER_COLOR : BUTTON_BASE_COLOR;
             graphics.fill(getX(), getY(), getX() + width, getY() + height, background);
 
@@ -524,6 +774,13 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             int textX = getX() + TEXT_PADDING;
             int textColor = isSelected() ? 0xFFFFFFFF : 0xFFB5B5B5;
             graphics.drawString(font, getMessage(), textX, textY, textColor);
+            graphics.disableScissor();
+        }
+
+        @Override
+        public boolean isMouseOver(double mouseX, double mouseY) {
+            return super.isMouseOver(mouseX, mouseY)
+                    && isWithinCategoryViewport((int) mouseX, (int) mouseY, 1, 1);
         }
     }
 
