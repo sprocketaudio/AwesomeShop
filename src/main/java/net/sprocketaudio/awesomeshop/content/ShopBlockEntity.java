@@ -1,5 +1,6 @@
 package net.sprocketaudio.awesomeshop.content;
 
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +31,9 @@ import net.sprocketaudio.awesomeshop.Config.ConfiguredCurrency;
 import net.sprocketaudio.awesomeshop.Config.ConfiguredOffer;
 
 import net.minecraft.network.chat.Component;
+import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.items.wrapper.SidedInvWrapper;
+import org.jetbrains.annotations.Nullable;
 
 public class ShopBlockEntity extends BlockEntity implements WorldlyContainer, MenuProvider {
     private static final String CURRENCIES_TAG = "Currencies";
@@ -37,9 +41,16 @@ public class ShopBlockEntity extends BlockEntity implements WorldlyContainer, Me
     private static final String CURRENCY_COUNT_TAG = "Count";
 
     private final Map<ResourceLocation, Integer> currencyCounts = new HashMap<>();
+    private final Map<Direction, SidedInvWrapper> sidedHandlers = new EnumMap<>(Direction.class);
+    private final SidedInvWrapper unsidedHandler;
 
     public ShopBlockEntity(BlockPos pos, BlockState state) {
         super(AwesomeShop.SHOP_BLOCK_ENTITY.get(), pos, state);
+
+        for (Direction direction : Direction.values()) {
+            sidedHandlers.put(direction, new SidedInvWrapper(this, direction));
+        }
+        unsidedHandler = new SidedInvWrapper(this, null);
     }
 
     public boolean tryPurchase(ConfiguredOffer offer, int quantity, Player player) {
@@ -238,5 +249,13 @@ public class ShopBlockEntity extends BlockEntity implements WorldlyContainer, Me
     @Override
     public ShopMenu createMenu(int id, Inventory inventory, Player player) {
         return new ShopMenu(id, inventory, this, Config.getConfiguredOffers());
+    }
+
+    @Nullable
+    public IItemHandler getItemHandler(@Nullable Direction direction) {
+        if (direction == null) {
+            return unsidedHandler;
+        }
+        return sidedHandlers.get(direction);
     }
 }

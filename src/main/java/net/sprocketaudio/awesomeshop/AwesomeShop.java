@@ -20,6 +20,8 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.registries.DeferredBlock;
@@ -80,6 +82,8 @@ public class AwesomeShop {
         modContainer.registerConfig(ModConfig.Type.SERVER, Config.SPEC);
 
         modEventBus.addListener(AwesomeShopClient::registerScreens);
+
+        modEventBus.addListener(this::registerCapabilities);
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
@@ -91,6 +95,10 @@ public class AwesomeShop {
         if (event.getTabKey() == CreativeModeTabs.FUNCTIONAL_BLOCKS) {
             event.accept(SHOP_BLOCK_ITEM);
         }
+    }
+
+    private void registerCapabilities(RegisterCapabilitiesEvent event) {
+        event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, SHOP_BLOCK_ENTITY.get(), ShopBlockEntity::getItemHandler);
     }
 
     // You can use SubscribeEvent and let the Event Bus discover methods to call
