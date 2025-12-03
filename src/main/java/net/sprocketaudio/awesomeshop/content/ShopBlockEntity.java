@@ -188,6 +188,11 @@ public class ShopBlockEntity extends BlockEntity implements WorldlyContainer, Me
     }
 
     @Override
+    public int getMaxStackSize() {
+        return Integer.MAX_VALUE;
+    }
+
+    @Override
     public boolean isEmpty() {
         return currencyCounts.values().stream().allMatch(count -> count <= 0);
     }
