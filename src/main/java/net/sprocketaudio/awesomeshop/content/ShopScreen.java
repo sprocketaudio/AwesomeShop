@@ -749,14 +749,14 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
                 continue;
             }
             int quantity = selectedQuantities[i];
-            if (quantity <= 0) {
+            if (quantity <= 1) {
                 continue;
             }
             int maxAffordable = calculateMaxAffordable(offers.get(i), reserved);
-            if (maxAffordable <= 0) {
+            if (maxAffordable <= 1) {
                 continue;
             }
-            int effectiveQuantity = Math.min(quantity, maxAffordable);
+            int effectiveQuantity = Math.min(quantity, maxAffordable) - 1;
             for (Map.Entry<ConfiguredCurrency, Integer> entry : Config.aggregatePriceRequirements(offers.get(i).prices())
                     .entrySet()) {
                 int total = entry.getValue() * effectiveQuantity;
