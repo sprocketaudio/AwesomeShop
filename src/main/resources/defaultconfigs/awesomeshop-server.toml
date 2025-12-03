@@ -7,10 +7,19 @@ currencies = [
     "minecraft:gold_ingot",
 ]
 
-# Items that can be purchased from the shop block along with their prices and currencies.
-# Format: namespace:item|currency=price[,currency=price]
-# Example: minecraft:apple|minecraft:emerald=2,minecraft:gold_ingot=1
+# Categories displayed in the shop UI.
+categories = [
+    "cat1",
+    "cat2",
+    "cat3",
+]
+
+# Items that can be purchased from the shop block along with their prices, currencies, and categories.
+# Each entry uses the format: namespace:item|category|currency=price[,currency=price]
+# The category sits between the item id and the price section. For example, the first offer below assigns the apple
+# to the "cat1" category.
 shopOffers = [
-    "minecraft:apple|minecraft:emerald=1",
-    "minecraft:bread|minecraft:gold_ingot=2"
+    "minecraft:apple|cat1|minecraft:emerald=1",
+    "minecraft:bread|cat2|minecraft:gold_ingot=2",
+    "minecraft:cooked_porkchop|cat3|minecraft:emerald=3"
 ]

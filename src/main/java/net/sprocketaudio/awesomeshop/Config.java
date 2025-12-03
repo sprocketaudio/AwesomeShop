@@ -21,6 +21,11 @@ import net.sprocketaudio.awesomeshop.AwesomeShop;
 public class Config {
     private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
 
+    public static final ModConfigSpec.ConfigValue<List<? extends String>> CATEGORIES = BUILDER
+            .comment("Categories that will be shown in the shop GUI.")
+            .defineListAllowEmpty("categories", List.of("cat1", "cat2", "cat3"), () -> "",
+                    Config::validateCategoryName);
+
     public static final ModConfigSpec.ConfigValue<List<? extends String>> CURRENCIES = BUILDER
             .comment("Items that can be used as currency for shop transactions.",
                     "Format: namespace:item", "Example: minecraft:emerald")
@@ -29,14 +34,22 @@ public class Config {
 
     public static final ModConfigSpec.ConfigValue<List<? extends String>> SHOP_OFFERS = BUILDER
             .comment(
-                    "Items that can be purchased from the shop block along with their prices and currencies.",
-                    "Format: namespace:item|currency=price[,currency=price]",
-                    "Example: minecraft:apple|minecraft:emerald=2,minecraft:gold_ingot=1")
+                    "Items that can be purchased from the shop block along with their prices, currencies, and categories.",
+                    "Format: namespace:item|category|currency=price[,currency=price]",
+                    "Example: minecraft:apple|produce|minecraft:emerald=2,minecraft:gold_ingot=1")
             .defineListAllowEmpty("shopOffers",
-                    List.of("minecraft:apple|minecraft:emerald=1", "minecraft:bread|minecraft:gold_ingot=2"), () -> "",
+                    List.of("minecraft:apple|cat1|minecraft:emerald=1", "minecraft:bread|cat1|minecraft:gold_ingot=2"),
+                    () -> "",
                     Config::validateOffer);
 
     static final ModConfigSpec SPEC = BUILDER.build();
+
+    private static boolean validateCategoryName(final Object obj) {
+        if (!(obj instanceof String category)) {
+            return false;
+        }
+        return !category.trim().isEmpty();
+    }
 
     private static boolean validateItemName(final Object obj) {
         if (!(obj instanceof String itemName)) {
@@ -57,11 +70,24 @@ public class Config {
         return currencies;
     }
 
+    public static List<String> getConfiguredCategories() {
+        List<String> categories = CATEGORIES.get().stream()
+                .map(String::trim)
+                .filter(entry -> !entry.isEmpty())
+                .collect(Collectors.toCollection(ArrayList::new));
+
+        if (categories.isEmpty()) {
+            categories.add("default");
+        }
+        return categories;
+    }
+
     public static List<ConfiguredOffer> getConfiguredOffers() {
+        List<String> categories = getConfiguredCategories();
         List<ConfiguredCurrency> currencies = getConfiguredCurrencies();
         Map<ResourceLocation, ConfiguredCurrency> currencyLookup = buildCurrencyLookup(currencies);
         return SHOP_OFFERS.get().stream()
-                .map(raw -> parseOffer(raw, currencyLookup))
+                .map(raw -> parseOffer(raw, categories, currencyLookup))
                 .flatMap(Optional::stream)
                 .collect(Collectors.toCollection(ArrayList::new));
     }
@@ -83,10 +109,12 @@ public class Config {
     public static class ConfiguredOffer {
         private final ItemStack item;
         private final List<PriceRequirement> prices;
+        private final String category;
 
-        public ConfiguredOffer(ItemStack item, List<PriceRequirement> prices) {
+        public ConfiguredOffer(ItemStack item, List<PriceRequirement> prices, String category) {
             this.item = item;
             this.prices = List.copyOf(prices);
+            this.category = category;
         }
 
         public ItemStack item() {
@@ -95,6 +123,10 @@ public class Config {
 
         public List<PriceRequirement> prices() {
             return prices;
+        }
+
+        public String category() {
+            return category;
         }
     }
 
@@ -124,17 +156,18 @@ public class Config {
             return false;
         }
 
-        String[] parts = raw.split("\\|", 2);
-        if (parts.length != 2) {
+        Optional<OfferTokens> tokens = parseOfferTokens(raw);
+        if (tokens.isEmpty()) {
             return false;
         }
 
-        ResourceLocation itemId = ResourceLocation.tryParse(parts[0]);
-        if (itemId == null || !BuiltInRegistries.ITEM.containsKey(itemId)) {
+        OfferTokens parsed = tokens.get();
+        if (parsed.itemId() == null || !BuiltInRegistries.ITEM.containsKey(parsed.itemId())) {
             return false;
         }
 
-        return parsePriceRequirements(parts[1], raw).stream().allMatch(req -> BuiltInRegistries.ITEM.containsKey(req.id()));
+        return parsePriceRequirements(parsed.priceSection(), raw).stream()
+                .allMatch(req -> BuiltInRegistries.ITEM.containsKey(req.id()));
     }
 
     private static Optional<ConfiguredCurrency> parseCurrency(String currencyId) {
@@ -147,18 +180,19 @@ public class Config {
         return Optional.of(new ConfiguredCurrency(id, currencyItem));
     }
 
-    private static Optional<ConfiguredOffer> parseOffer(final String raw, Map<ResourceLocation, ConfiguredCurrency> currencyLookup) {
-        String[] parts = raw.split("\\|", 2);
-        if (parts.length != 2) {
+    private static Optional<ConfiguredOffer> parseOffer(final String raw, List<String> categories,
+            Map<ResourceLocation, ConfiguredCurrency> currencyLookup) {
+        Optional<OfferTokens> tokens = parseOfferTokens(raw);
+        if (tokens.isEmpty()) {
             return Optional.empty();
         }
 
-        ResourceLocation itemId = ResourceLocation.tryParse(parts[0]);
-        if (itemId == null || !BuiltInRegistries.ITEM.containsKey(itemId)) {
+        OfferTokens parsed = tokens.get();
+        if (parsed.itemId() == null || !BuiltInRegistries.ITEM.containsKey(parsed.itemId())) {
             return Optional.empty();
         }
 
-        List<PriceRequirement> requirements = parsePriceRequirements(parts[1], raw).stream()
+        List<PriceRequirement> requirements = parsePriceRequirements(parsed.priceSection(), raw).stream()
                 .map(req -> buildRequirement(req, currencyLookup))
                 .flatMap(Optional::stream)
                 .collect(Collectors.toCollection(ArrayList::new));
@@ -166,8 +200,21 @@ public class Config {
             return Optional.empty();
         }
 
-        ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.get(itemId));
-        return Optional.of(new ConfiguredOffer(stack, requirements));
+        ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.get(parsed.itemId()));
+        String category = resolveCategory(parsed.category(), categories);
+        return Optional.of(new ConfiguredOffer(stack, requirements, category));
+    }
+
+    private static Optional<OfferTokens> parseOfferTokens(String raw) {
+        String[] parts = raw.split("\\|", 3);
+        if (parts.length < 2) {
+            return Optional.empty();
+        }
+
+        ResourceLocation itemId = ResourceLocation.tryParse(parts[0]);
+        String category = parts.length == 3 ? parts[1].trim() : "";
+        String priceSection = parts.length == 3 ? parts[2] : parts[1];
+        return Optional.of(new OfferTokens(itemId, category, priceSection));
     }
 
     private static Optional<PriceRequirement> buildRequirement(RawRequirement req,
@@ -191,7 +238,26 @@ public class Config {
         return lookup;
     }
 
+    private static String resolveCategory(String category, List<String> categories) {
+        String trimmed = category == null ? "" : category.trim();
+        if (!trimmed.isEmpty() && categories.contains(trimmed)) {
+            return trimmed;
+        }
+        String fallback = categories.isEmpty() ? "default" : categories.get(0);
+        if (!trimmed.isEmpty()) {
+            AwesomeShop.LOGGER.warn("Category '{}' is not configured; defaulting to '{}'.", trimmed, fallback);
+        } else {
+            AwesomeShop.LOGGER.warn(
+                    "No category was provided for an offer entry; add a category between the item id and price section (e.g. 'minecraft:apple|cat1|minecraft:emerald=1'). Defaulting to '{}'.",
+                    fallback);
+        }
+        return fallback;
+    }
+
     private record RawRequirement(ResourceLocation id, int price) {
+    }
+
+    private record OfferTokens(ResourceLocation itemId, String category, String priceSection) {
     }
 
     private static List<RawRequirement> parsePriceRequirements(String priceSection, String rawOffer) {
