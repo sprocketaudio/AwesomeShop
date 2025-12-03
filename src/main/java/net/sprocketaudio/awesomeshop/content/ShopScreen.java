@@ -212,7 +212,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     }
 
     @Override
-    public void renderBackground(GuiGraphics graphics) {
+    public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
     }
 
     private void renderPanels(GuiGraphics graphics) {
