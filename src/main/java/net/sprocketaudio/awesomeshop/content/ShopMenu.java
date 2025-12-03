@@ -31,6 +31,7 @@ public class ShopMenu extends AbstractContainerMenu {
     private final ShopBlockEntity shop;
     private final List<ConfiguredOffer> offers;
     private final List<ConfiguredCurrency> currencies;
+    private final List<String> categories;
     private final Map<ResourceLocation, Integer> currencyIndex;
     private final int[] currencyCounts;
 
@@ -41,19 +42,20 @@ public class ShopMenu extends AbstractContainerMenu {
     }
 
     public ShopMenu(int id, Inventory inventory, ShopBlockEntity shop, List<ConfiguredOffer> offers) {
-        this(id, inventory, shop, Config.getConfiguredCurrencies(), offers);
+        this(id, inventory, shop, Config.getConfiguredCategories(), Config.getConfiguredCurrencies(), offers);
     }
 
     private ShopMenu(int id, Inventory inventory, MenuData data) {
-        this(id, inventory, data.shop(), data.currencies(), data.offers());
+        this(id, inventory, data.shop(), data.categories(), data.currencies(), data.offers());
     }
 
-    private ShopMenu(int id, Inventory inventory, ShopBlockEntity shop, List<ConfiguredCurrency> currencies,
-            List<ConfiguredOffer> offers) {
+    private ShopMenu(int id, Inventory inventory, ShopBlockEntity shop, List<String> categories,
+            List<ConfiguredCurrency> currencies, List<ConfiguredOffer> offers) {
         super(AwesomeShop.SHOP_MENU.get(), id);
         this.shop = shop;
         this.offers = List.copyOf(offers);
         this.currencies = List.copyOf(currencies);
+        this.categories = List.copyOf(categories);
         this.currencyIndex = createCurrencyIndex(this.currencies);
         this.currencyCounts = new int[this.currencies.size()];
         this.access = shop == null ? ContainerLevelAccess.NULL : ContainerLevelAccess.create(shop.getLevel(), shop.getBlockPos());
@@ -82,15 +84,20 @@ public class ShopMenu extends AbstractContainerMenu {
 
     private static MenuData decodeData(Level level, RegistryFriendlyByteBuf data) {
         ShopBlockEntity shop = readShopFromClient(level, data);
+        List<String> categories = readCategories(data);
         List<ConfiguredCurrency> currencies = readCurrencies(data);
         Map<ResourceLocation, ConfiguredCurrency> currencyLookup = buildCurrencyLookup(currencies);
-        List<ConfiguredOffer> offers = readOffers(data, currencyLookup);
-        return new MenuData(shop, currencies, offers);
+        List<ConfiguredOffer> offers = readOffers(data, categories, currencyLookup);
+        return new MenuData(shop, categories, currencies, offers);
     }
 
     private static ShopBlockEntity readShopFromClient(Level level, RegistryFriendlyByteBuf data) {
         BlockPos pos = data.readBlockPos();
         return level.getBlockEntity(pos) instanceof ShopBlockEntity be ? be : null;
+    }
+
+    private static List<String> readCategories(RegistryFriendlyByteBuf data) {
+        return data.readList(buf -> buf.readUtf());
     }
 
     private static List<ConfiguredCurrency> readCurrencies(RegistryFriendlyByteBuf data) {
@@ -113,7 +120,7 @@ public class ShopMenu extends AbstractContainerMenu {
         return lookup;
     }
 
-    private static List<ConfiguredOffer> readOffers(RegistryFriendlyByteBuf data,
+    private static List<ConfiguredOffer> readOffers(RegistryFriendlyByteBuf data, List<String> categories,
             Map<ResourceLocation, ConfiguredCurrency> currencyLookup) {
         return data.readList(buf -> {
             ItemStack stack = ItemStack.STREAM_CODEC.decode((RegistryFriendlyByteBuf) buf);
@@ -134,7 +141,12 @@ public class ShopMenu extends AbstractContainerMenu {
                 prices.add(new PriceRequirement(fallback, 1));
             }
 
-            return new ConfiguredOffer(stack, prices);
+            String category = ((RegistryFriendlyByteBuf) buf).readUtf();
+            if (!categories.contains(category) && !categories.isEmpty()) {
+                category = categories.get(0);
+            }
+
+            return new ConfiguredOffer(stack, prices, category);
         });
     }
 
@@ -146,7 +158,8 @@ public class ShopMenu extends AbstractContainerMenu {
         return lookup;
     }
 
-    private record MenuData(ShopBlockEntity shop, List<ConfiguredCurrency> currencies, List<ConfiguredOffer> offers) {
+    private record MenuData(ShopBlockEntity shop, List<String> categories, List<ConfiguredCurrency> currencies,
+            List<ConfiguredOffer> offers) {
     }
 
     public List<ConfiguredOffer> getOffers() {
@@ -155,6 +168,10 @@ public class ShopMenu extends AbstractContainerMenu {
 
     public List<ConfiguredCurrency> getCurrencies() {
         return currencies;
+    }
+
+    public List<String> getCategories() {
+        return categories;
     }
 
     public int getCurrencyCount(ConfiguredCurrency currency) {
@@ -210,6 +227,8 @@ public class ShopMenu extends AbstractContainerMenu {
 
     public static void writeScreenData(ShopBlockEntity shop, RegistryFriendlyByteBuf buffer) {
         buffer.writeBlockPos(Objects.requireNonNull(shop).getBlockPos());
+        List<String> categories = Config.getConfiguredCategories();
+        buffer.writeCollection(categories, (buf, category) -> buf.writeUtf(category));
         List<ConfiguredCurrency> currencies = Config.getConfiguredCurrencies();
         buffer.writeCollection(currencies, (buf, currency) -> buf.writeResourceLocation(currency.id()));
         buffer.writeCollection(new ArrayList<>(Config.getConfiguredOffers()), (buf, offer) -> {
@@ -219,6 +238,7 @@ public class ShopMenu extends AbstractContainerMenu {
                 ((RegistryFriendlyByteBuf) buf).writeResourceLocation(price.currency().id());
                 ((RegistryFriendlyByteBuf) buf).writeVarInt(price.price());
             });
+            ((RegistryFriendlyByteBuf) buf).writeUtf(offer.category());
         });
     }
 }
