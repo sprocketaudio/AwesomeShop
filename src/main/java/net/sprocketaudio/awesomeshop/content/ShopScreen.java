@@ -34,12 +34,12 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private static final float GUI_HEIGHT_RATIO = 0.8f;
     private static final float CATEGORY_COLUMN_RATIO = 0.25f;
     private static final int CARD_WIDTH = 170;
-    private static final int CARD_HEIGHT = 150;
+    private static final int CARD_HEIGHT = 120;
     private static final int CARD_PADDING = 8;
     private static final int BORDER_THICKNESS = 2;
-    private static final int CARD_BORDER_COLOR = 0xAAFFFFFF;
+    private static final int CARD_BORDER_COLOR = 0xCCFFFFFF;
     private static final int PANEL_BORDER_COLOR = 0xCCFFFFFF;
-    private static final int PANEL_FILL_COLOR = 0xEE0D0D0D;
+    private static final int PANEL_FILL_COLOR = 0xEE161616;
     private static final int CARD_FILL_COLOR = 0xEE161616;
     private static final int CURRENCY_GAP = 10;
     private static final int ITEM_ICON_SIZE = 24;
@@ -81,7 +81,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     }
 
     private int getTopRowY() {
-        return topPos + PADDING;
+        return topPos + PADDING + BORDER_THICKNESS;
     }
 
     private void rebuildLayout() {
@@ -112,18 +112,15 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             int minusX = card.startX() + CARD_PADDING;
             int plusX = card.startX() + CARD_WIDTH - CARD_PADDING - BUTTON_WIDTH;
 
-            addRenderableWidget(Button.builder(Component.literal("-"), b -> adjustQuantity(index, -1))
-                    .bounds(minusX, quantityButtonY, BUTTON_WIDTH, BUTTON_HEIGHT)
-                    .build());
+            addRenderableWidget(createTintedButton(minusX, quantityButtonY, BUTTON_WIDTH, BUTTON_HEIGHT, Component.literal("-"),
+                    b -> adjustQuantity(index, -1)));
 
-            addRenderableWidget(Button.builder(Component.literal("+"), b -> adjustQuantity(index, 1))
-                    .bounds(plusX, quantityButtonY, BUTTON_WIDTH, BUTTON_HEIGHT)
-                    .build());
+            addRenderableWidget(createTintedButton(plusX, quantityButtonY, BUTTON_WIDTH, BUTTON_HEIGHT, Component.literal("+"),
+                    b -> adjustQuantity(index, 1)));
 
             int purchaseY = quantityButtonY + BUTTON_HEIGHT + BUTTON_GAP;
-            Button purchaseButton = Button.builder(Component.literal(""), b -> purchaseOffer(index))
-                    .bounds(card.startX() + CARD_PADDING, purchaseY, CARD_WIDTH - (CARD_PADDING * 2), BUTTON_HEIGHT)
-                    .build();
+            Button purchaseButton = createTintedButton(card.startX() + CARD_PADDING, purchaseY, CARD_WIDTH - (CARD_PADDING * 2),
+                    BUTTON_HEIGHT, Component.literal(""), b -> purchaseOffer(index));
             purchaseButtons.put(index, addRenderableWidget(purchaseButton));
             updatePurchaseButton(index);
         }
@@ -135,9 +132,8 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         int startY = getCategoryButtonsStartY();
 
         for (String category : categories) {
-            Button button = Button.builder(Component.literal(category), b -> selectCategory(category))
-                    .bounds(startX, startY, buttonWidth, CATEGORY_BUTTON_HEIGHT)
-                    .build();
+            Button button = createTintedButton(startX, startY, buttonWidth, CATEGORY_BUTTON_HEIGHT, Component.literal(category),
+                    b -> selectCategory(category));
             categoryButtons.put(category, addRenderableWidget(button));
             startY += CATEGORY_BUTTON_HEIGHT + BUTTON_GAP;
         }
@@ -203,6 +199,10 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         button.active = quantity > 0;
     }
 
+    private Button createTintedButton(int x, int y, int width, int height, Component label, Button.OnPress onPress) {
+        return new SolidButton(x, y, width, height, label, onPress);
+    }
+
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
     }
@@ -233,7 +233,6 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         int categoryRight = leftPos + getCategoryColumnWidth();
         int categoryBottom = topPos + imageHeight;
         graphics.fill(leftPos, topPos, categoryRight, categoryBottom, PANEL_FILL_COLOR);
-        graphics.fill(categoryRight - BORDER_THICKNESS, topPos, categoryRight, categoryBottom, PANEL_BORDER_COLOR);
 
         int dividerX = categoryRight + (COLUMN_GAP / 2);
         graphics.fill(dividerX, topPos, dividerX + BORDER_THICKNESS, bottom, PANEL_BORDER_COLOR);
@@ -304,7 +303,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             return;
         }
 
-        int currencyY = getTopRowY();
+        int currencyRowBaseline = getTopRowY();
         int totalWidth = calculateCurrencyTotalsWidth(currencies);
         int startX = leftPos + imageWidth - PADDING - totalWidth;
         int currentX = startX;
@@ -314,10 +313,11 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             Component totalLine = Component.literal("x " + menu.getCurrencyCount(currency));
             int lineWidth = 16 + 4 + font.width(totalLine);
 
-            graphics.renderItem(currencyStack, currentX, currencyY);
-            graphics.renderItemDecorations(font, currencyStack, currentX, currencyY);
+            int iconY = currencyRowBaseline - ((16 - font.lineHeight) / 2);
+            graphics.renderItem(currencyStack, currentX, iconY);
+            graphics.renderItemDecorations(font, currencyStack, currentX, iconY);
 
-            int textY = currencyY + Math.max(0, (16 - font.lineHeight) / 2);
+            int textY = currencyRowBaseline;
             graphics.drawString(font, totalLine, currentX + 16 + 4, textY, 0xFFFFFF);
 
             currentX += lineWidth + CURRENCY_GAP;
@@ -482,6 +482,24 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             return 0;
         }
         return Math.max(0, maxAffordable);
+    }
+
+    private class SolidButton extends Button {
+        private static final int BASE_COLOR = 0xFF4A4A4A;
+        private static final int HOVER_COLOR = 0xFF595959;
+
+        SolidButton(int x, int y, int width, int height, Component label, OnPress onPress) {
+            super(x, y, width, height, label, onPress, DEFAULT_NARRATION);
+        }
+
+        @Override
+        public void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            int background = isHoveredOrFocused() ? HOVER_COLOR : BASE_COLOR;
+            graphics.fill(getX(), getY(), getX() + width, getY() + height, background);
+            int textY = getY() + (height - font.lineHeight) / 2;
+            int textColor = active ? 0xFFFFFFFF : 0xFFBBBBBB;
+            graphics.drawCenteredString(font, getMessage(), getX() + (width / 2), textY, textColor);
+        }
     }
 
     private record OfferCard(int offerIndex, int startX, int startY) {
