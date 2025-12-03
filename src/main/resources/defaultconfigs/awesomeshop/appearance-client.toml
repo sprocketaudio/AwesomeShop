@@ -99,7 +99,7 @@
     # Range: 0.0 ~ 1.0
     backgroundOpacityDisabled = 0.67
     # Border color for offer buttons.
-    borderColor = "0xAAAAAA"
+    borderColor = "0x282828"
     # Border color for hovered offer buttons.
     borderColorHover = "0xFFFFFF"
     # Border color for disabled offer buttons.
