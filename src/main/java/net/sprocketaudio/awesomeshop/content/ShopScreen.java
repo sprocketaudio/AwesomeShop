@@ -14,6 +14,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
+import net.sprocketaudio.awesomeshop.Config;
 import net.sprocketaudio.awesomeshop.Config.ConfiguredCurrency;
 import net.sprocketaudio.awesomeshop.Config.ConfiguredOffer;
 import net.sprocketaudio.awesomeshop.Config.PriceRequirement;
@@ -472,12 +473,12 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
 
     private int calculateMaxAffordable(ConfiguredOffer offer) {
         int maxAffordable = Integer.MAX_VALUE;
-        for (PriceRequirement requirement : offer.prices()) {
-            int priceEach = requirement.price();
+        for (Map.Entry<ConfiguredCurrency, Integer> entry : Config.aggregatePriceRequirements(offer.prices()).entrySet()) {
+            int priceEach = entry.getValue();
             if (priceEach <= 0) {
                 continue;
             }
-            int available = menu.getCurrencyCount(requirement.currency());
+            int available = menu.getCurrencyCount(entry.getKey());
             maxAffordable = Math.min(maxAffordable, available / priceEach);
         }
         if (maxAffordable == Integer.MAX_VALUE) {
