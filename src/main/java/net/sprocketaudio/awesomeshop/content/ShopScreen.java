@@ -21,12 +21,10 @@ import net.sprocketaudio.awesomeshop.Config.PriceRequirement;
 
 public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private static final int PADDING = 8;
-    private static final int SECTION_TOP = 64;
     private static final int GRID_GAP = 12;
     private static final int BUTTON_WIDTH = 18;
     private static final int BUTTON_HEIGHT = 14;
     private static final int BUTTON_GAP = 2;
-    private static final int PURCHASE_BUTTON_WIDTH = 100;
     private static final int CATEGORY_BUTTON_HEIGHT = 26;
     private static final int CATEGORY_TITLE_GAP = 6;
     private static final int CATEGORY_BUTTON_Y_OFFSET = 18;
@@ -36,7 +34,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private static final float GUI_HEIGHT_RATIO = 0.8f;
     private static final float CATEGORY_COLUMN_RATIO = 0.25f;
     private static final int CARD_WIDTH = 170;
-    private static final int CARD_HEIGHT = 120;
+    private static final int CARD_HEIGHT = 100;
     private static final int CARD_PADDING = 8;
     private static final int BORDER_THICKNESS = 2;
     private static final int CARD_BORDER_COLOR = 0xCCFFFFFF;
