@@ -224,7 +224,10 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         int right = leftPos + imageWidth;
         int bottom = topPos + imageHeight;
         int categoryRight = leftPos + getCategoryColumnWidth();
-        int shopLeft = categoryRight + COLUMN_GAP;
+        int innerLeft = leftPos + BORDER_THICKNESS;
+        int innerTop = topPos + BORDER_THICKNESS;
+        int innerRight = right - BORDER_THICKNESS;
+        int innerBottom = bottom - BORDER_THICKNESS;
 
         // Panel frame
         graphics.fill(leftPos, topPos, right, topPos + BORDER_THICKNESS, PANEL_BORDER_COLOR);
@@ -232,12 +235,11 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         graphics.fill(leftPos, topPos, leftPos + BORDER_THICKNESS, bottom, PANEL_BORDER_COLOR);
         graphics.fill(right - BORDER_THICKNESS, topPos, right, bottom, PANEL_BORDER_COLOR);
 
-        // Category and shop backgrounds (single opacity pass)
-        graphics.fill(leftPos, topPos, categoryRight, bottom, PANEL_FILL_COLOR);
-        graphics.fill(shopLeft, topPos, right, bottom, PANEL_FILL_COLOR);
+        // Unified background inside the frame
+        graphics.fill(innerLeft, innerTop, innerRight, innerBottom, PANEL_FILL_COLOR);
 
         int dividerX = categoryRight + (COLUMN_GAP / 2);
-        graphics.fill(dividerX, topPos, dividerX + BORDER_THICKNESS, bottom, PANEL_BORDER_COLOR);
+        graphics.fill(dividerX, innerTop, dividerX + BORDER_THICKNESS, innerBottom, PANEL_BORDER_COLOR);
     }
 
     private void renderCategoryPanel(GuiGraphics graphics) {
