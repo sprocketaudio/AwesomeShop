@@ -57,6 +57,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
 
     private final int[] selectedQuantities;
     private final Map<Integer, Button> purchaseButtons = new HashMap<>();
+    private final List<Button> offerButtons = new ArrayList<>();
     private final Map<String, Button> categoryButtons = new HashMap<>();
     private final List<String> categories;
     private String selectedCategory;
@@ -97,6 +98,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private void rebuildLayout() {
         clearWidgets();
         purchaseButtons.clear();
+        offerButtons.clear();
         categoryButtons.clear();
 
         if (!categories.contains(selectedCategory) && !categories.isEmpty()) {
@@ -127,18 +129,20 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             Button minusButton = createTintedButton(minusX, quantityButtonY, BUTTON_WIDTH, BUTTON_HEIGHT, Component.literal("-"),
                     b -> adjustQuantity(index, -1));
             minusButton.visible = visible;
-            addRenderableWidget(minusButton);
+            offerButtons.add(addRenderableWidget(minusButton));
 
             Button plusButton = createTintedButton(plusX, quantityButtonY, BUTTON_WIDTH, BUTTON_HEIGHT, Component.literal("+"),
                     b -> adjustQuantity(index, 1));
             plusButton.visible = visible;
-            addRenderableWidget(plusButton);
+            offerButtons.add(addRenderableWidget(plusButton));
 
             int purchaseY = quantityButtonY + BUTTON_HEIGHT + BUTTON_GAP;
             Button purchaseButton = createTintedButton(card.startX() + CARD_PADDING, purchaseY, CARD_WIDTH - (CARD_PADDING * 2),
                     BUTTON_HEIGHT, Component.literal(""), b -> purchaseOffer(index));
             purchaseButton.visible = visible;
-            purchaseButtons.put(index, addRenderableWidget(purchaseButton));
+            Button widget = addRenderableWidget(purchaseButton);
+            purchaseButtons.put(index, widget);
+            offerButtons.add(widget);
             updatePurchaseButton(index);
         }
     }
@@ -234,6 +238,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         renderPanels(graphics);
         renderOfferDetails(graphics);
         renderScrollbar(graphics);
+        refreshOfferButtonVisibility();
         super.render(graphics, mouseX, mouseY, partialTick);
         renderCategoryPanel(graphics);
         renderCurrencyTotals(graphics);
@@ -544,6 +549,27 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         return cardBottom > offersTop && cardTop < offersBottom;
     }
 
+    private void refreshOfferButtonVisibility() {
+        for (Button button : offerButtons) {
+            button.visible = isWithinOffersViewport(button);
+        }
+    }
+
+    private boolean isWithinOffersViewport(Button button) {
+        return isWithinOffersViewport(button.getX(), button.getY(), button.getWidth(), button.getHeight());
+    }
+
+    private boolean isWithinOffersViewport(int x, int y, int width, int height) {
+        int viewportLeft = getShopColumnLeft();
+        int viewportRight = leftPos + imageWidth - PADDING;
+        int viewportTop = getOffersStartY();
+        int viewportBottom = topPos + imageHeight - PADDING;
+
+        int right = x + width;
+        int bottom = y + height;
+        return right > viewportLeft && x < viewportRight && bottom > viewportTop && y < viewportBottom;
+    }
+
     private int calculateCurrencyTotalsWidth(List<ConfiguredCurrency> currencies) {
         int total = 0;
         for (int i = 0; i < currencies.size(); i++) {
@@ -589,11 +615,20 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
 
         @Override
         public void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            if (!isWithinOffersViewport(this)) {
+                return;
+            }
+
             int background = isHoveredOrFocused() ? BUTTON_HOVER_COLOR : BUTTON_BASE_COLOR;
             graphics.fill(getX(), getY(), getX() + width, getY() + height, background);
             int textY = getY() + (height - font.lineHeight) / 2;
             int textColor = active ? 0xFFFFFFFF : 0xFFB5B5B5;
             graphics.drawCenteredString(font, getMessage(), getX() + (width / 2), textY, textColor);
+        }
+
+        @Override
+        public boolean isMouseOver(double mouseX, double mouseY) {
+            return super.isMouseOver(mouseX, mouseY) && isWithinOffersViewport(this);
         }
     }
 
