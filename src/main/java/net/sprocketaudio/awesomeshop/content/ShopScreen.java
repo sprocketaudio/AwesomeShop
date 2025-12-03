@@ -58,7 +58,6 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private int originalGuiScale = -1;
 
     private final int[] selectedQuantities;
-    private final boolean[] engagedOffers;
     private final Map<Integer, Button> minusButtons = new HashMap<>();
     private final Map<Integer, Button> plusButtons = new HashMap<>();
     private final Map<Integer, Button> purchaseButtons = new HashMap<>();
@@ -75,7 +74,6 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     public ShopScreen(ShopMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
         this.selectedQuantities = new int[menu.getOffers().size()];
-        this.engagedOffers = new boolean[menu.getOffers().size()];
         Arrays.fill(this.selectedQuantities, 1);
         this.categories = new ArrayList<>(menu.getCategories());
         if (this.categories.isEmpty()) {
@@ -199,8 +197,17 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             return;
         }
 
-        selectedQuantities[index] = Math.max(1, selectedQuantities[index] + delta);
-        engagedOffers[index] = true;
+        int maxAffordable = calculateMaxAffordable(index);
+        if (delta > 0 && maxAffordable < 1) {
+            return;
+        }
+
+        int updated = Math.max(1, selectedQuantities[index] + delta);
+        if (delta > 0) {
+            updated = Math.min(updated, Math.max(1, maxAffordable));
+        }
+
+        selectedQuantities[index] = updated;
         reconcileQuantities();
     }
 
@@ -237,8 +244,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private void reconcileQuantities() {
         for (int i = 0; i < selectedQuantities.length; i++) {
             int maxAffordable = calculateMaxAffordable(i);
-            int clampedQuantity = Mth.clamp(selectedQuantities[i], 1, Math.max(1, maxAffordable));
-            selectedQuantities[i] = clampedQuantity;
+            selectedQuantities[i] = Math.max(1, selectedQuantities[i]);
             updatePurchaseButton(i, maxAffordable);
             updateQuantityButtons(i, maxAffordable);
         }
@@ -731,44 +737,10 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             return 0;
         }
 
-        Map<ConfiguredCurrency, Integer> reserved = calculateReservedCurrencyExcluding(offerIndex);
-        return calculateMaxAffordable(offers.get(offerIndex), reserved);
+        return calculateMaxAffordable(offers.get(offerIndex));
     }
 
-    private Map<ConfiguredCurrency, Integer> calculateReservedCurrencyExcluding(int excludedIndex) {
-        Map<ConfiguredCurrency, Integer> reserved = new HashMap<>();
-        List<ConfiguredOffer> offers = menu.getOffers();
-        for (int i = 0; i < offers.size(); i++) {
-            if (i == excludedIndex) {
-                continue;
-            }
-            if (i >= selectedQuantities.length) {
-                break;
-            }
-            if (!engagedOffers[i]) {
-                continue;
-            }
-            int quantity = selectedQuantities[i];
-            if (quantity <= 1) {
-                continue;
-            }
-            int maxAffordable = calculateMaxAffordable(offers.get(i), reserved);
-            if (maxAffordable <= 1) {
-                continue;
-            }
-            int effectiveQuantity = Math.min(quantity, maxAffordable) - 1;
-            for (Map.Entry<ConfiguredCurrency, Integer> entry : Config.aggregatePriceRequirements(offers.get(i).prices())
-                    .entrySet()) {
-                int total = entry.getValue() * effectiveQuantity;
-                if (total > 0) {
-                    reserved.merge(entry.getKey(), total, Integer::sum);
-                }
-            }
-        }
-        return reserved;
-    }
-
-    private int calculateMaxAffordable(ConfiguredOffer offer, Map<ConfiguredCurrency, Integer> reserved) {
+    private int calculateMaxAffordable(ConfiguredOffer offer) {
         int maxAffordable = Integer.MAX_VALUE;
         Map<ConfiguredCurrency, Integer> prices = Config.aggregatePriceRequirements(offer.prices());
         if (prices.isEmpty()) {
@@ -779,7 +751,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             if (priceEach <= 0) {
                 continue;
             }
-            int available = menu.getCurrencyCount(entry.getKey()) - reserved.getOrDefault(entry.getKey(), 0);
+            int available = menu.getCurrencyCount(entry.getKey());
             maxAffordable = Math.min(maxAffordable, Math.max(0, available) / priceEach);
         }
         if (maxAffordable == Integer.MAX_VALUE) {
