@@ -1,5 +1,5 @@
 {
-  "block.awesomeshop.shop_block": "Shop Block",
+  "block.awesomeshop.shop_block": "Awesome Shop",
   "block.awesomeshop.shop_block.no_offers": "No offers configured for this shop.",
   "block.awesomeshop.shop_block.offer": "Offer: %1$s for %2$s",
   "block.awesomeshop.shop_block.purchase": "You bought %2$s x %1$s!",
