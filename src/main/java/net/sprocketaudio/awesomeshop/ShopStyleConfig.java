@@ -25,7 +25,7 @@ public class ShopStyleConfig {
             "0xFFFFFF", "Text color for the shop title.");
     public static final ModConfigSpec.DoubleValue TITLE_FONT_SCALE = BUILDER
             .comment("Scale multiplier applied to the shop title font size.")
-            .defineInRange("gui.title.fontScale", 1.0d, 0.5d, 3.0d);
+            .defineInRange("gui.title.fontScale", 1.7d, 0.5d, 3.0d);
 
     public static final ModConfigSpec.ConfigValue<String> CATEGORY_PANEL_BACKGROUND_COLOR = colorValue(
             "gui.categoryPanel.backgroundColor", "0x161616",
@@ -76,7 +76,7 @@ public class ShopStyleConfig {
             "Text color for the \"Categories\" heading.");
     public static final ModConfigSpec.DoubleValue CATEGORY_TITLE_FONT_SCALE = BUILDER
             .comment("Scale multiplier applied to the Categories heading font size.")
-            .defineInRange("category.titleFontScale", 1.0d, 0.5d, 3.0d);
+            .defineInRange("category.titleFontScale", 1.5d, 0.5d, 3.0d);
     public static final ModConfigSpec.ConfigValue<String> CATEGORY_BUTTON_TEXT_COLOR = colorValue(
             "category.button.textColor", "0xFFFFFF",
             "Text color for unselected category buttons.");
