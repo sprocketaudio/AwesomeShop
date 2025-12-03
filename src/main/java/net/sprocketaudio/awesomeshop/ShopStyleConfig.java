@@ -12,6 +12,21 @@ public class ShopStyleConfig {
             .comment("Thickness of the main GUI border in pixels.")
             .defineInRange("gui.borderThickness", 2, 1, 12);
 
+    public static final ModConfigSpec.ConfigValue<String> TITLE_BACKGROUND_COLOR = colorValue(
+            "gui.title.backgroundColor", "0x161616", "Base RGB color for the shop title background box.");
+    public static final ModConfigSpec.DoubleValue TITLE_BACKGROUND_OPACITY = opacityValue(
+            "gui.title.backgroundOpacity", 0.8d, "Opacity (0-1) applied to the shop title background box.");
+    public static final ModConfigSpec.ConfigValue<String> TITLE_BORDER_COLOR = colorValue("gui.title.borderColor",
+            "0x777777", "Border color for the shop title background box.");
+    public static final ModConfigSpec.IntValue TITLE_BORDER_THICKNESS = BUILDER
+            .comment("Border thickness for the shop title box in pixels.")
+            .defineInRange("gui.title.borderThickness", 2, 0, 12);
+    public static final ModConfigSpec.ConfigValue<String> TITLE_TEXT_COLOR = colorValue("gui.title.textColor",
+            "0xFFFFFF", "Text color for the shop title.");
+    public static final ModConfigSpec.DoubleValue TITLE_FONT_SCALE = BUILDER
+            .comment("Scale multiplier applied to the shop title font size.")
+            .defineInRange("gui.title.fontScale", 1.0d, 0.5d, 3.0d);
+
     public static final ModConfigSpec.ConfigValue<String> CATEGORY_PANEL_BACKGROUND_COLOR = colorValue(
             "gui.categoryPanel.backgroundColor", "0x161616",
             "Base RGB color for the category column background.");
@@ -59,6 +74,9 @@ public class ShopStyleConfig {
     public static final ModConfigSpec.ConfigValue<String> CATEGORY_TITLE_TEXT_COLOR = colorValue(
             "category.titleTextColor", "0xFFFFFF",
             "Text color for the \"Categories\" heading.");
+    public static final ModConfigSpec.DoubleValue CATEGORY_TITLE_FONT_SCALE = BUILDER
+            .comment("Scale multiplier applied to the Categories heading font size.")
+            .defineInRange("category.titleFontScale", 1.0d, 0.5d, 3.0d);
     public static final ModConfigSpec.ConfigValue<String> CATEGORY_BUTTON_TEXT_COLOR = colorValue(
             "category.button.textColor", "0xFFFFFF",
             "Text color for unselected category buttons.");
@@ -125,6 +143,11 @@ public class ShopStyleConfig {
                         "gui.categoryPanel.background"),
                 composeColor(ITEM_PANEL_BACKGROUND_COLOR.get(), ITEM_PANEL_BACKGROUND_OPACITY.get(),
                         "gui.itemPanel.background"),
+                composeColor(TITLE_BACKGROUND_COLOR.get(), TITLE_BACKGROUND_OPACITY.get(), "gui.title.background"),
+                composeColor(TITLE_BORDER_COLOR.get(), 1.0d, "gui.title.border"),
+                TITLE_BORDER_THICKNESS.get(),
+                composeColor(TITLE_TEXT_COLOR.get(), 1.0d, "gui.title.text"),
+                TITLE_FONT_SCALE.get().floatValue(),
                 composeColor(CATEGORY_BUTTON_BACKGROUND_SELECTED.get(),
                         CATEGORY_BUTTON_BACKGROUND_SELECTED_OPACITY.get(), "category.button.selected"),
                 composeColor(CATEGORY_BUTTON_BACKGROUND_HOVER.get(), CATEGORY_BUTTON_BACKGROUND_HOVER_OPACITY.get(),
@@ -137,6 +160,7 @@ public class ShopStyleConfig {
                         "category.button.borderColorSelected"),
                 CATEGORY_BUTTON_BORDER_THICKNESS.get(),
                 composeColor(CATEGORY_TITLE_TEXT_COLOR.get(), 1.0d, "category.titleTextColor"),
+                CATEGORY_TITLE_FONT_SCALE.get().floatValue(),
                 composeColor(CATEGORY_BUTTON_TEXT_COLOR_SELECTED.get(), 1.0d, "category.button.text.selected"),
                 composeColor(CATEGORY_BUTTON_TEXT_COLOR_HOVER.get(), 1.0d, "category.button.text.hover"),
                 composeColor(CATEGORY_BUTTON_TEXT_COLOR.get(), 1.0d, "category.button.text"),
@@ -204,9 +228,11 @@ public class ShopStyleConfig {
     }
 
     public record ShopStyle(int guiBorderColor, int guiBorderThickness, int categoryPanelBackground,
-            int itemPanelBackground, int categoryButtonSelectedBackground, int categoryButtonHoverBackground,
-            int categoryButtonBackground, int categoryButtonBorderColor, int categoryButtonBorderHoverColor,
-            int categoryButtonBorderSelectedColor, int categoryButtonBorderThickness, int categoryTitleTextColor,
+            int itemPanelBackground, int titleBackgroundColor, int titleBorderColor, int titleBorderThickness,
+            int titleTextColor, float titleFontScale, int categoryButtonSelectedBackground,
+            int categoryButtonHoverBackground, int categoryButtonBackground, int categoryButtonBorderColor,
+            int categoryButtonBorderHoverColor, int categoryButtonBorderSelectedColor,
+            int categoryButtonBorderThickness, int categoryTitleTextColor, float categoryTitleFontScale,
             int categoryButtonTextSelectedColor, int categoryButtonTextHoverColor, int categoryButtonTextColor,
             int cardPanelBackground, int cardPanelBorderColor, int cardPanelBorderThickness, int cardButtonBackground,
             int cardButtonHoverBackground, int cardButtonDisabledBackground, int cardButtonBorderColor,
