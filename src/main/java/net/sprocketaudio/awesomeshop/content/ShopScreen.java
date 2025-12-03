@@ -167,10 +167,8 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         }
 
         int contentHeight = calculateContentHeight();
-        int desiredHeight = calculateImageHeight(contentHeight);
-        int maxHeight = this.height - (PADDING * 2);
-        int ratioHeight = (int) (this.height * GUI_HEIGHT_RATIO);
-        this.imageHeight = Math.max(140, Math.min(desiredHeight, Math.min(maxHeight, ratioHeight)));
+        int mainAreaHeight = calculateMainAreaHeight();
+        this.imageHeight = getTitleBoxHeight() + TITLE_BOX_GAP + mainAreaHeight;
         this.topPos = Math.max(PADDING, (this.height - this.imageHeight) / 2);
         updateScrollBounds(contentHeight);
         updateCategoryScrollBounds();
@@ -646,15 +644,10 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         lockedGuiScale = -1;
     }
 
-    private int calculateImageHeight() {
-        return calculateImageHeight(calculateContentHeight());
-    }
-
-    private int calculateImageHeight(int contentHeight) {
-        int headerHeight = PADDING + getGuiBorderThickness() + getCategoryTitleHeight() + CATEGORY_TITLE_GAP
-                + CATEGORY_BUTTON_Y_OFFSET;
-        int mainPanelHeight = headerHeight + contentHeight + PADDING;
-        return getTitleBoxHeight() + TITLE_BOX_GAP + Math.max(mainPanelHeight, 140);
+    private int calculateMainAreaHeight() {
+        int availableHeight = Math.max(0, this.height - (PADDING * 2) - getTitleBoxHeight() - TITLE_BOX_GAP);
+        int desiredHeight = Math.max(140, (int) (this.height * GUI_HEIGHT_RATIO));
+        return Math.min(desiredHeight, availableHeight);
     }
 
     private int getCategoryButtonsStartY() {
