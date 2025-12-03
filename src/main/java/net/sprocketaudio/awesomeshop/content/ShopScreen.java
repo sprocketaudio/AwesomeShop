@@ -31,6 +31,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private static final int COLUMN_GAP = 10;
     private static final int MIN_IMAGE_WIDTH = 320;
     private static final float GUI_WIDTH_RATIO = 0.8f;
+    private static final float GUI_HEIGHT_RATIO = 0.8f;
     private static final float CATEGORY_COLUMN_RATIO = 0.25f;
     private static final int CARD_WIDTH = 170;
     private static final int CARD_HEIGHT = 150;
@@ -88,7 +89,9 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         }
 
         this.cards = buildCards();
-        this.imageHeight = Math.min(calculateImageHeight(), this.height - (PADDING * 2));
+        int maxHeight = this.height - (PADDING * 2);
+        int targetHeight = (int) (this.height * GUI_HEIGHT_RATIO);
+        this.imageHeight = Mth.clamp(Math.max(calculateImageHeight(), targetHeight), 140, maxHeight);
         this.topPos = Math.max(PADDING, (this.height - this.imageHeight) / 2);
         this.cards = buildCards();
 
@@ -197,17 +200,19 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
 
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        renderTransparentBackground(graphics);
     }
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderTransparentBackground(graphics);
         renderPanels(graphics);
         super.render(graphics, mouseX, mouseY, partialTick);
         renderCategoryPanel(graphics);
         renderCurrencyTotals(graphics);
         renderOfferDetails(graphics);
+    }
+
+    @Override
+    public void renderBackground(GuiGraphics graphics) {
     }
 
     private void renderPanels(GuiGraphics graphics) {
