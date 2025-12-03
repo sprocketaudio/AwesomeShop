@@ -30,13 +30,14 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private static final int CATEGORY_TITLE_GAP = 6;
     private static final int COLUMN_GAP = 10;
     private static final int MIN_IMAGE_WIDTH = 320;
-    private static final float GUI_WIDTH_RATIO = 0.9f;
+    private static final float GUI_WIDTH_RATIO = 0.8f;
     private static final float CATEGORY_COLUMN_RATIO = 0.25f;
     private static final int CARD_WIDTH = 170;
     private static final int CARD_HEIGHT = 150;
     private static final int CARD_PADDING = 8;
-    private static final int CARD_BORDER_COLOR = 0x55FFFFFF;
-    private static final int PANEL_BORDER_COLOR = 0x66FFFFFF;
+    private static final int BORDER_THICKNESS = 2;
+    private static final int CARD_BORDER_COLOR = 0xAAFFFFFF;
+    private static final int PANEL_BORDER_COLOR = 0xCCFFFFFF;
     private static final int PANEL_FILL_COLOR = 0x33000000;
     private static final int CURRENCY_GAP = 10;
     private static final int ITEM_ICON_SIZE = 24;
@@ -87,9 +88,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         }
 
         this.cards = buildCards();
-        this.imageHeight = calculateImageHeight();
-        int targetHeight = (int) (this.height * GUI_WIDTH_RATIO);
-        this.imageHeight = Math.max(this.imageHeight, targetHeight);
+        this.imageHeight = Math.min(calculateImageHeight(), this.height - (PADDING * 2));
         this.topPos = Math.max(PADDING, (this.height - this.imageHeight) / 2);
         this.cards = buildCards();
 
@@ -102,15 +101,15 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             int index = card.offerIndex();
             int priceRowY = getPriceRowY(card.startY());
             int quantityButtonY = priceRowY - Math.max(0, (BUTTON_HEIGHT - font.lineHeight) / 2) - 1;
-            int plusX = card.startX() + CARD_PADDING;
-            int minusX = card.startX() + CARD_WIDTH - CARD_PADDING - BUTTON_WIDTH;
-
-            addRenderableWidget(Button.builder(Component.literal("+"), b -> adjustQuantity(index, 1))
-                    .bounds(plusX, quantityButtonY, BUTTON_WIDTH, BUTTON_HEIGHT)
-                    .build());
+            int minusX = card.startX() + CARD_PADDING;
+            int plusX = card.startX() + CARD_WIDTH - CARD_PADDING - BUTTON_WIDTH;
 
             addRenderableWidget(Button.builder(Component.literal("-"), b -> adjustQuantity(index, -1))
                     .bounds(minusX, quantityButtonY, BUTTON_WIDTH, BUTTON_HEIGHT)
+                    .build());
+
+            addRenderableWidget(Button.builder(Component.literal("+"), b -> adjustQuantity(index, 1))
+                    .bounds(plusX, quantityButtonY, BUTTON_WIDTH, BUTTON_HEIGHT)
                     .build());
 
             int purchaseY = quantityButtonY + BUTTON_HEIGHT + BUTTON_GAP;
@@ -203,7 +202,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics, mouseX, mouseY, partialTick);
+        renderTransparentBackground(graphics);
         renderPanels(graphics);
         super.render(graphics, mouseX, mouseY, partialTick);
         renderCategoryPanel(graphics);
@@ -216,18 +215,18 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         int bottom = topPos + imageHeight;
 
         graphics.fill(leftPos, topPos, right, bottom, PANEL_FILL_COLOR);
-        graphics.fill(leftPos, topPos, right, topPos + 1, PANEL_BORDER_COLOR);
-        graphics.fill(leftPos, bottom - 1, right, bottom, PANEL_BORDER_COLOR);
-        graphics.fill(leftPos, topPos, leftPos + 1, bottom, PANEL_BORDER_COLOR);
-        graphics.fill(right - 1, topPos, right, bottom, PANEL_BORDER_COLOR);
+        graphics.fill(leftPos, topPos, right, topPos + BORDER_THICKNESS, PANEL_BORDER_COLOR);
+        graphics.fill(leftPos, bottom - BORDER_THICKNESS, right, bottom, PANEL_BORDER_COLOR);
+        graphics.fill(leftPos, topPos, leftPos + BORDER_THICKNESS, bottom, PANEL_BORDER_COLOR);
+        graphics.fill(right - BORDER_THICKNESS, topPos, right, bottom, PANEL_BORDER_COLOR);
 
         int categoryRight = leftPos + getCategoryColumnWidth();
         int categoryBottom = topPos + imageHeight;
         graphics.fill(leftPos, topPos, categoryRight, categoryBottom, PANEL_FILL_COLOR);
-        graphics.fill(categoryRight - 1, topPos, categoryRight, categoryBottom, PANEL_BORDER_COLOR);
+        graphics.fill(categoryRight - BORDER_THICKNESS, topPos, categoryRight, categoryBottom, PANEL_BORDER_COLOR);
 
         int dividerX = categoryRight + (COLUMN_GAP / 2);
-        graphics.fill(dividerX, topPos, dividerX + 1, bottom, PANEL_BORDER_COLOR);
+        graphics.fill(dividerX, topPos, dividerX + BORDER_THICKNESS, bottom, PANEL_BORDER_COLOR);
     }
 
     private void renderCategoryPanel(GuiGraphics graphics) {
@@ -250,10 +249,10 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             int cardCenterX = cardX + (CARD_WIDTH / 2);
 
             graphics.fill(cardX, cardY, cardX + CARD_WIDTH, cardY + CARD_HEIGHT, PANEL_FILL_COLOR);
-            graphics.fill(cardX, cardY, cardX + CARD_WIDTH, cardY + 1, CARD_BORDER_COLOR);
-            graphics.fill(cardX, cardY + CARD_HEIGHT - 1, cardX + CARD_WIDTH, cardY + CARD_HEIGHT, CARD_BORDER_COLOR);
-            graphics.fill(cardX, cardY, cardX + 1, cardY + CARD_HEIGHT, CARD_BORDER_COLOR);
-            graphics.fill(cardX + CARD_WIDTH - 1, cardY, cardX + CARD_WIDTH, cardY + CARD_HEIGHT, CARD_BORDER_COLOR);
+            graphics.fill(cardX, cardY, cardX + CARD_WIDTH, cardY + BORDER_THICKNESS, CARD_BORDER_COLOR);
+            graphics.fill(cardX, cardY + CARD_HEIGHT - BORDER_THICKNESS, cardX + CARD_WIDTH, cardY + CARD_HEIGHT, CARD_BORDER_COLOR);
+            graphics.fill(cardX, cardY, cardX + BORDER_THICKNESS, cardY + CARD_HEIGHT, CARD_BORDER_COLOR);
+            graphics.fill(cardX + CARD_WIDTH - BORDER_THICKNESS, cardY, cardX + CARD_WIDTH, cardY + CARD_HEIGHT, CARD_BORDER_COLOR);
 
             Component itemName = offer.item().getHoverName();
             int nameY = cardY + CARD_PADDING;
