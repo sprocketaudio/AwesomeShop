@@ -100,6 +100,8 @@ public class ShopStyleConfig {
             "card.button.borderColor", "0x282828", "Border color for offer buttons.");
     public static final ModConfigSpec.ConfigValue<String> CARD_BUTTON_BORDER_COLOR_HOVER = colorValue(
             "card.button.borderColorHover", "0xFFFFFF", "Border color for hovered offer buttons.");
+    public static final ModConfigSpec.ConfigValue<String> CARD_BUTTON_BORDER_COLOR_DISABLED = colorValue(
+            "card.button.borderColorDisabled", "0x282828", "Border color for disabled offer buttons.");
     public static final ModConfigSpec.IntValue CARD_BUTTON_BORDER_THICKNESS = BUILDER
             .comment("Border thickness for offer buttons in pixels.")
             .defineInRange("card.button.borderThickness", 1, 0, 6);
@@ -150,6 +152,7 @@ public class ShopStyleConfig {
                         "card.button.disabled"),
                 composeColor(CARD_BUTTON_BORDER_COLOR.get(), 1.0d, "card.button.border"),
                 composeColor(CARD_BUTTON_BORDER_COLOR_HOVER.get(), 1.0d, "card.button.borderHover"),
+                composeColor(CARD_BUTTON_BORDER_COLOR_DISABLED.get(), 1.0d, "card.button.borderDisabled"),
                 CARD_BUTTON_BORDER_THICKNESS.get(),
                 composeColor(CARD_ITEM_TEXT_COLOR.get(), 1.0d, "card.itemTextColor"),
                 composeColor(CARD_BUTTON_TEXT_COLOR.get(), 1.0d, "card.button.text"),
@@ -207,8 +210,9 @@ public class ShopStyleConfig {
             int categoryButtonTextSelectedColor, int categoryButtonTextHoverColor, int categoryButtonTextColor,
             int cardPanelBackground, int cardPanelBorderColor, int cardPanelBorderThickness, int cardButtonBackground,
             int cardButtonHoverBackground, int cardButtonDisabledBackground, int cardButtonBorderColor,
-            int cardButtonBorderHoverColor, int cardButtonBorderThickness, int cardItemTextColor,
-            int cardButtonTextColor, int cardButtonTextHoverColor, int cardButtonTextDisabledColor) {
+            int cardButtonBorderHoverColor, int cardButtonBorderDisabledColor, int cardButtonBorderThickness,
+            int cardItemTextColor, int cardButtonTextColor, int cardButtonTextHoverColor,
+            int cardButtonTextDisabledColor) {
     }
 
     private record ParsedColor(int rgb, int alpha) {

@@ -102,6 +102,8 @@
     borderColor = "0x282828"
     # Border color for hovered offer buttons.
     borderColorHover = "0xFFFFFF"
+    # Border color for disabled offer buttons.
+    borderColorDisabled = "0x282828"
     # Border thickness for offer buttons in pixels.
     # Default: 1
     # Range: 0 ~ 6
