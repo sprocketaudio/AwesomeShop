@@ -18,6 +18,8 @@ import net.sprocketaudio.awesomeshop.Config;
 import net.sprocketaudio.awesomeshop.Config.ConfiguredCurrency;
 import net.sprocketaudio.awesomeshop.Config.ConfiguredOffer;
 import net.sprocketaudio.awesomeshop.Config.PriceRequirement;
+import net.sprocketaudio.awesomeshop.ShopStyleConfig;
+import net.sprocketaudio.awesomeshop.ShopStyleConfig.ShopStyle;
 
 public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private static final int PADDING = 8;
@@ -36,17 +38,6 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private static final int CARD_WIDTH = 170;
     private static final int CARD_HEIGHT = 100;
     private static final int CARD_PADDING = 8;
-    private static final int BORDER_THICKNESS = 2;
-    private static final int CARD_BORDER_COLOR = 0xCCFFFFFF;
-    private static final int PANEL_BORDER_COLOR = 0xCCFFFFFF;
-    private static final int PANEL_FILL_COLOR = 0xEE161616;
-    private static final int CARD_FILL_COLOR = 0xEE161616;
-    private static final int BUTTON_BASE_COLOR = 0xCC111111;
-    private static final int BUTTON_HOVER_COLOR = 0xDD222222;
-    private static final int BUTTON_DISABLED_COLOR = 0xAA2C2C2C;
-    private static final int BUTTON_DISABLED_TEXT_COLOR = 0xFF666666;
-    private static final int BUTTON_OUTLINE_COLOR = 0xCCFFFFFF;
-    private static final int BUTTON_OUTLINE_THICKNESS = 1;
     private static final int CURRENCY_GAP = 8;
     private static final int ITEM_ICON_SIZE = 24;
     private static final int SCROLLBAR_WIDTH = 8;
@@ -70,6 +61,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private double maxScroll;
     private double categoryScrollOffset;
     private double categoryMaxScroll;
+    private ShopStyle style;
 
     public ShopScreen(ShopMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
@@ -82,11 +74,13 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         this.selectedCategory = this.categories.get(0);
         this.imageWidth = 360;
         this.imageHeight = 140;
+        this.style = ShopStyleConfig.getStyle();
     }
 
     @Override
     protected void init() {
         super.init();
+        this.style = ShopStyleConfig.getStyle();
         lockGuiScale();
         recalculateDimensions();
         rebuildLayout();
@@ -98,7 +92,23 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     }
 
     private int getTopRowY() {
-        return topPos + PADDING + BORDER_THICKNESS;
+        return topPos + PADDING + getGuiBorderThickness();
+    }
+
+    private int getGuiBorderThickness() {
+        return Math.max(0, style.guiBorderThickness());
+    }
+
+    private int getCardBorderThickness() {
+        return Math.max(0, style.cardPanelBorderThickness());
+    }
+
+    private int getCategoryButtonBorderThickness() {
+        return Math.max(0, style.categoryButtonBorderThickness());
+    }
+
+    private int getButtonBorderThickness() {
+        return Math.max(0, style.cardButtonBorderThickness());
     }
 
     private void rebuildLayout() {
@@ -295,28 +305,34 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         int right = leftPos + imageWidth;
         int bottom = topPos + imageHeight;
         int categoryRight = leftPos + getCategoryColumnWidth();
-        int innerLeft = leftPos + BORDER_THICKNESS;
-        int innerTop = topPos + BORDER_THICKNESS;
-        int innerRight = right - BORDER_THICKNESS;
-        int innerBottom = bottom - BORDER_THICKNESS;
+        int borderThickness = getGuiBorderThickness();
+        int innerLeft = leftPos + borderThickness;
+        int innerTop = topPos + borderThickness;
+        int innerRight = right - borderThickness;
+        int innerBottom = bottom - borderThickness;
 
         // Panel frame
-        graphics.fill(leftPos, topPos, right, topPos + BORDER_THICKNESS, PANEL_BORDER_COLOR);
-        graphics.fill(leftPos, bottom - BORDER_THICKNESS, right, bottom, PANEL_BORDER_COLOR);
-        graphics.fill(leftPos, topPos, leftPos + BORDER_THICKNESS, bottom, PANEL_BORDER_COLOR);
-        graphics.fill(right - BORDER_THICKNESS, topPos, right, bottom, PANEL_BORDER_COLOR);
+        graphics.fill(leftPos, topPos, right, topPos + borderThickness, style.guiBorderColor());
+        graphics.fill(leftPos, bottom - borderThickness, right, bottom, style.guiBorderColor());
+        graphics.fill(leftPos, topPos, leftPos + borderThickness, bottom, style.guiBorderColor());
+        graphics.fill(right - borderThickness, topPos, right, bottom, style.guiBorderColor());
 
-        // Unified background inside the frame
-        graphics.fill(innerLeft, innerTop, innerRight, innerBottom, PANEL_FILL_COLOR);
+        int categoryBackgroundRight = Math.min(innerRight, categoryRight);
+        graphics.fill(innerLeft, innerTop, categoryBackgroundRight, innerBottom, style.categoryPanelBackground());
 
-        int dividerX = categoryRight + (COLUMN_GAP / 2);
-        graphics.fill(dividerX, innerTop, dividerX + BORDER_THICKNESS, innerBottom, PANEL_BORDER_COLOR);
+        int itemBackgroundLeft = Math.max(innerLeft, categoryBackgroundRight + COLUMN_GAP);
+        if (itemBackgroundLeft < innerRight) {
+            graphics.fill(itemBackgroundLeft, innerTop, innerRight, innerBottom, style.itemPanelBackground());
+        }
+
+        int dividerX = Math.min(right - borderThickness, categoryRight + (COLUMN_GAP / 2));
+        graphics.fill(dividerX, innerTop, dividerX + borderThickness, innerBottom, style.guiBorderColor());
     }
 
     private void renderCategoryPanel(GuiGraphics graphics) {
         int titleX = leftPos + PADDING;
         int titleY = getTopRowY();
-        graphics.drawString(font, Component.literal("Categories"), titleX, titleY, 0xFFFFFF);
+        graphics.drawString(font, Component.literal("Categories"), titleX, titleY, style.categoryTitleTextColor());
     }
 
     private void renderScrollbar(GuiGraphics graphics) {
@@ -342,7 +358,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         int thumbAvailable = trackHeight - thumbHeight;
         int thumbOffset = maxScroll == 0 ? 0 : (int) ((scrollOffset / maxScroll) * thumbAvailable);
         int thumbTop = barTop + thumbOffset;
-        graphics.fill(barX, thumbTop, barX + SCROLLBAR_WIDTH, thumbTop + thumbHeight, BUTTON_HOVER_COLOR);
+        graphics.fill(barX, thumbTop, barX + SCROLLBAR_WIDTH, thumbTop + thumbHeight, style.cardButtonHoverBackground());
     }
 
     private void renderCategoryScrollbar(GuiGraphics graphics) {
@@ -368,7 +384,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         int thumbAvailable = trackHeight - thumbHeight;
         int thumbOffset = categoryMaxScroll == 0 ? 0 : (int) ((categoryScrollOffset / categoryMaxScroll) * thumbAvailable);
         int thumbTop = barTop + thumbOffset;
-        graphics.fill(barX, thumbTop, barX + SCROLLBAR_WIDTH, thumbTop + thumbHeight, BUTTON_HOVER_COLOR);
+        graphics.fill(barX, thumbTop, barX + SCROLLBAR_WIDTH, thumbTop + thumbHeight, style.cardButtonHoverBackground());
     }
 
     private void renderOfferDetails(GuiGraphics graphics) {
@@ -388,15 +404,18 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             int cardY = card.startY();
             int cardCenterX = cardX + (CARD_WIDTH / 2);
 
-            graphics.fill(cardX, cardY, cardX + CARD_WIDTH, cardY + CARD_HEIGHT, CARD_FILL_COLOR);
-            graphics.fill(cardX, cardY, cardX + CARD_WIDTH, cardY + BORDER_THICKNESS, CARD_BORDER_COLOR);
-            graphics.fill(cardX, cardY + CARD_HEIGHT - BORDER_THICKNESS, cardX + CARD_WIDTH, cardY + CARD_HEIGHT, CARD_BORDER_COLOR);
-            graphics.fill(cardX, cardY, cardX + BORDER_THICKNESS, cardY + CARD_HEIGHT, CARD_BORDER_COLOR);
-            graphics.fill(cardX + CARD_WIDTH - BORDER_THICKNESS, cardY, cardX + CARD_WIDTH, cardY + CARD_HEIGHT, CARD_BORDER_COLOR);
+            int cardBorder = getCardBorderThickness();
+            graphics.fill(cardX, cardY, cardX + CARD_WIDTH, cardY + CARD_HEIGHT, style.cardPanelBackground());
+            graphics.fill(cardX, cardY, cardX + CARD_WIDTH, cardY + cardBorder, style.cardPanelBorderColor());
+            graphics.fill(cardX, cardY + CARD_HEIGHT - cardBorder, cardX + CARD_WIDTH, cardY + CARD_HEIGHT,
+                    style.cardPanelBorderColor());
+            graphics.fill(cardX, cardY, cardX + cardBorder, cardY + CARD_HEIGHT, style.cardPanelBorderColor());
+            graphics.fill(cardX + CARD_WIDTH - cardBorder, cardY, cardX + CARD_WIDTH, cardY + CARD_HEIGHT,
+                    style.cardPanelBorderColor());
 
             Component itemName = offer.item().getHoverName();
             int nameY = cardY + CARD_PADDING;
-            graphics.drawCenteredString(font, itemName, cardCenterX, nameY, 0xFFFFFF);
+            graphics.drawCenteredString(font, itemName, cardCenterX, nameY, style.cardItemTextColor());
 
             float iconScale = ITEM_ICON_SIZE / 16f;
             int iconX = cardCenterX - (int) (ITEM_ICON_SIZE / 2f);
@@ -760,15 +779,15 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         return Math.max(0, maxAffordable);
     }
 
-    private void renderButtonOutline(GuiGraphics graphics, int x, int y, int width, int height) {
-        if (width <= 0 || height <= 0) {
+    private void renderButtonOutline(GuiGraphics graphics, int x, int y, int width, int height, int thickness, int color) {
+        if (width <= 0 || height <= 0 || thickness <= 0) {
             return;
         }
-        int thickness = Math.max(1, Math.min(BUTTON_OUTLINE_THICKNESS, Math.min(width, height) / 2));
-        graphics.fill(x, y, x + width, y + thickness, BUTTON_OUTLINE_COLOR);
-        graphics.fill(x, y + height - thickness, x + width, y + height, BUTTON_OUTLINE_COLOR);
-        graphics.fill(x, y, x + thickness, y + height, BUTTON_OUTLINE_COLOR);
-        graphics.fill(x + width - thickness, y, x + width, y + height, BUTTON_OUTLINE_COLOR);
+        int clampedThickness = Math.max(1, Math.min(thickness, Math.min(width, height) / 2));
+        graphics.fill(x, y, x + width, y + clampedThickness, color);
+        graphics.fill(x, y + height - clampedThickness, x + width, y + height, color);
+        graphics.fill(x, y, x + clampedThickness, y + height, color);
+        graphics.fill(x + width - clampedThickness, y, x + width, y + height, color);
     }
 
     private class SolidButton extends Button {
@@ -789,11 +808,14 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
 
             graphics.enableScissor(viewportLeft, viewportTop, viewportRight, viewportBottom);
             boolean hovered = active && isHoveredOrFocused();
-            int background = !active ? BUTTON_DISABLED_COLOR : hovered ? BUTTON_HOVER_COLOR : BUTTON_BASE_COLOR;
+            int background = !active ? style.cardButtonDisabledBackground()
+                    : hovered ? style.cardButtonHoverBackground() : style.cardButtonBackground();
             graphics.fill(getX(), getY(), getX() + width, getY() + height, background);
-            renderButtonOutline(graphics, getX(), getY(), width, height);
+            int outlineColor = hovered ? style.cardButtonBorderHoverColor() : style.cardButtonBorderColor();
+            renderButtonOutline(graphics, getX(), getY(), width, height, getButtonBorderThickness(), outlineColor);
             int textY = getY() + (height - font.lineHeight) / 2;
-            int textColor = active ? 0xFFFFFFFF : BUTTON_DISABLED_TEXT_COLOR;
+            int textColor = !active ? style.cardButtonTextDisabledColor()
+                    : hovered ? style.cardButtonTextHoverColor() : style.cardButtonTextColor();
             graphics.drawCenteredString(font, getMessage(), getX() + (width / 2), textY, textColor);
             graphics.disableScissor();
         }
@@ -830,13 +852,23 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             int viewportBottom = topPos + imageHeight - PADDING;
 
             graphics.enableScissor(viewportLeft, viewportTop, viewportRight, viewportBottom);
-            int background = isHoveredOrFocused() ? BUTTON_HOVER_COLOR : BUTTON_BASE_COLOR;
+            boolean hovered = isHoveredOrFocused();
+            int background;
+            if (isSelected()) {
+                background = style.categoryButtonSelectedBackground();
+            } else if (hovered) {
+                background = style.categoryButtonHoverBackground();
+            } else {
+                background = style.categoryButtonBackground();
+            }
             graphics.fill(getX(), getY(), getX() + width, getY() + height, background);
-            renderButtonOutline(graphics, getX(), getY(), width, height);
+            int outlineColor = hovered ? style.categoryButtonBorderHoverColor() : style.categoryButtonBorderColor();
+            renderButtonOutline(graphics, getX(), getY(), width, height, getCategoryButtonBorderThickness(), outlineColor);
 
             int textY = getY() + (height - font.lineHeight) / 2;
             int textX = getX() + TEXT_PADDING;
-            int textColor = 0xFFFFFFFF;
+            int textColor = isSelected() ? style.categoryButtonTextSelectedColor()
+                    : hovered ? style.categoryButtonTextHoverColor() : style.categoryButtonTextColor();
             graphics.drawString(font, getMessage(), textX, textY, textColor);
             graphics.disableScissor();
         }

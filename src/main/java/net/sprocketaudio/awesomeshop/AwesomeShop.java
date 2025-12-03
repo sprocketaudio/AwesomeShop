@@ -80,6 +80,7 @@ public class AwesomeShop {
 
         // Register our mod's ModConfigSpec so that FML can create and load the server-side config file for us
         modContainer.registerConfig(ModConfig.Type.SERVER, Config.SPEC);
+        modContainer.registerConfig(ModConfig.Type.CLIENT, ShopStyleConfig.SPEC, "awesomeshop/appearance-client.toml");
 
         modEventBus.addListener(AwesomeShopClient::registerScreens);
 

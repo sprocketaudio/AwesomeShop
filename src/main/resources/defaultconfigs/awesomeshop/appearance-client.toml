@@ -1,0 +1,90 @@
+# Client appearance configuration for AwesomeShop.
+# This file is copied to config/awesomeshop/appearance-client.toml by NeoForge when missing.
+
+[gui]
+    # Color used for the main GUI border and divider.
+    borderColor = "0xFFFFFF"
+    # Thickness of the main GUI border in pixels.
+    borderThickness = 2
+
+[gui.categoryPanel]
+    # Base RGB color for the category column background.
+    backgroundColor = "0x161616"
+    # Opacity (0-1) applied to the category column background.
+    backgroundOpacity = 0.93
+
+[gui.itemPanel]
+    # Base RGB color for the item panel background.
+    backgroundColor = "0x161616"
+    # Opacity (0-1) applied to the item panel background.
+    backgroundOpacity = 0.93
+
+[category.button]
+    # Background RGB color for the selected category button.
+    backgroundSelected = "0x222222"
+    # Opacity (0-1) applied to the selected category button background.
+    backgroundSelectedOpacity = 0.87
+    # Background RGB color for category buttons when hovered.
+    backgroundHover = "0x222222"
+    # Opacity (0-1) applied to hovered category buttons.
+    backgroundHoverOpacity = 0.87
+    # Background RGB color for unselected category buttons.
+    background = "0x111111"
+    # Opacity (0-1) applied to unselected category buttons.
+    backgroundOpacity = 0.8
+    # Border color for category buttons in their normal state.
+    borderColor = "0xFFFFFF"
+    # Border color for category buttons when hovered.
+    borderColorHover = "0xFFFFFF"
+    # Border thickness for category buttons in pixels.
+    borderThickness = 1
+    # Text color for unselected category buttons.
+    textColor = "0xFFFFFF"
+    # Text color for hovered category buttons.
+    textColorHover = "0xFFFFFF"
+    # Text color for selected category buttons.
+    textColorSelected = "0xFFFFFF"
+
+[category]
+    # Text color for the "Categories" heading.
+    titleTextColor = "0xFFFFFF"
+
+[card.panel]
+    # Base RGB color for offer cards.
+    backgroundColor = "0x161616"
+    # Opacity (0-1) applied to offer cards.
+    backgroundOpacity = 0.93
+    # Border color for offer cards.
+    borderColor = "0xFFFFFF"
+    # Border thickness for offer cards in pixels.
+    borderThickness = 2
+
+[card.button]
+    # Base RGB color for offer buttons.
+    backgroundColor = "0x111111"
+    # Opacity (0-1) applied to offer buttons.
+    backgroundOpacity = 0.8
+    # Background RGB color for hovered offer buttons.
+    backgroundColorHover = "0x222222"
+    # Opacity (0-1) applied to hovered offer buttons.
+    backgroundOpacityHover = 0.87
+    # Background RGB color for disabled offer buttons.
+    backgroundColorDisabled = "0x2C2C2C"
+    # Opacity (0-1) applied to disabled offer buttons.
+    backgroundOpacityDisabled = 0.67
+    # Border color for offer buttons.
+    borderColor = "0xFFFFFF"
+    # Border color for hovered offer buttons.
+    borderColorHover = "0xFFFFFF"
+    # Border thickness for offer buttons in pixels.
+    borderThickness = 1
+    # Text color for active offer buttons.
+    textColor = "0xFFFFFF"
+    # Text color for hovered offer buttons.
+    textColorHover = "0xFFFFFF"
+    # Text color for disabled offer buttons.
+    textColorDisabled = "0x666666"
+
+[card]
+    # Text color for the item title on cards.
+    itemTextColor = "0xFFFFFF"
