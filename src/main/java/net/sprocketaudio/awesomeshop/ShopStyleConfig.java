@@ -7,7 +7,7 @@ public class ShopStyleConfig {
     private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
 
     public static final ModConfigSpec.ConfigValue<String> GUI_BORDER_COLOR = colorValue("gui.borderColor",
-            "0xFFFFFF", "Color used for the main GUI border and divider.");
+            "0x777777", "Color used for the main GUI border and divider.");
     public static final ModConfigSpec.IntValue GUI_BORDER_THICKNESS = BUILDER
             .comment("Thickness of the main GUI border in pixels.")
             .defineInRange("gui.borderThickness", 2, 1, 12);
@@ -16,41 +16,41 @@ public class ShopStyleConfig {
             "gui.categoryPanel.backgroundColor", "0x161616",
             "Base RGB color for the category column background.");
     public static final ModConfigSpec.DoubleValue CATEGORY_PANEL_BACKGROUND_OPACITY = opacityValue(
-            "gui.categoryPanel.backgroundOpacity", 0.93d,
+            "gui.categoryPanel.backgroundOpacity", 0.8d,
             "Opacity (0-1) applied to the category column background.");
 
     public static final ModConfigSpec.ConfigValue<String> ITEM_PANEL_BACKGROUND_COLOR = colorValue(
             "gui.itemPanel.backgroundColor", "0x161616", "Base RGB color for the item panel background.");
     public static final ModConfigSpec.DoubleValue ITEM_PANEL_BACKGROUND_OPACITY = opacityValue(
-            "gui.itemPanel.backgroundOpacity", 0.93d,
+            "gui.itemPanel.backgroundOpacity", 0.8d,
             "Opacity (0-1) applied to the item panel background.");
 
     public static final ModConfigSpec.ConfigValue<String> CATEGORY_BUTTON_BACKGROUND_SELECTED = colorValue(
-            "category.button.backgroundSelected", "0x222222",
+            "category.button.backgroundSelected", "0x333333",
             "Background RGB color for the selected category button.");
     public static final ModConfigSpec.DoubleValue CATEGORY_BUTTON_BACKGROUND_SELECTED_OPACITY = opacityValue(
-            "category.button.backgroundSelectedOpacity", 0.87d,
+            "category.button.backgroundSelectedOpacity", 1.0d,
             "Opacity (0-1) applied to the selected category button background.");
     public static final ModConfigSpec.ConfigValue<String> CATEGORY_BUTTON_BACKGROUND_HOVER = colorValue(
             "category.button.backgroundHover", "0x222222",
             "Background RGB color for category buttons when hovered.");
     public static final ModConfigSpec.DoubleValue CATEGORY_BUTTON_BACKGROUND_HOVER_OPACITY = opacityValue(
-            "category.button.backgroundHoverOpacity", 0.87d,
+            "category.button.backgroundHoverOpacity", 1.0d,
             "Opacity (0-1) applied to hovered category buttons.");
     public static final ModConfigSpec.ConfigValue<String> CATEGORY_BUTTON_BACKGROUND = colorValue(
             "category.button.background", "0x111111", "Background RGB color for unselected category buttons.");
     public static final ModConfigSpec.DoubleValue CATEGORY_BUTTON_BACKGROUND_OPACITY = opacityValue(
-            "category.button.backgroundOpacity", 0.8d,
+            "category.button.backgroundOpacity", 0.7d,
             "Opacity (0-1) applied to unselected category buttons.");
 
     public static final ModConfigSpec.ConfigValue<String> CATEGORY_BUTTON_BORDER_COLOR = colorValue(
-            "category.button.borderColor", "0xFFFFFF",
+            "category.button.borderColor", "0x282828",
             "Border color for unselected category buttons in their normal state.");
     public static final ModConfigSpec.ConfigValue<String> CATEGORY_BUTTON_BORDER_COLOR_HOVER = colorValue(
             "category.button.borderColorHover", "0xFFFFFF",
             "Border color for category buttons when hovered.");
     public static final ModConfigSpec.ConfigValue<String> CATEGORY_BUTTON_BORDER_COLOR_SELECTED = colorValue(
-            "category.button.borderColorSelected", "0xFFFFFF",
+            "category.button.borderColorSelected", "0xD3D3D3",
             "Border color for selected category buttons.");
     public static final ModConfigSpec.IntValue CATEGORY_BUTTON_BORDER_THICKNESS = BUILDER
             .comment("Border thickness for category buttons in pixels.")
@@ -72,32 +72,32 @@ public class ShopStyleConfig {
     public static final ModConfigSpec.ConfigValue<String> CARD_PANEL_BACKGROUND_COLOR = colorValue(
             "card.panel.backgroundColor", "0x161616", "Base RGB color for offer cards.");
     public static final ModConfigSpec.DoubleValue CARD_PANEL_BACKGROUND_OPACITY = opacityValue(
-            "card.panel.backgroundOpacity", 0.93d, "Opacity (0-1) applied to offer cards.");
+            "card.panel.backgroundOpacity", 0.8d, "Opacity (0-1) applied to offer cards.");
     public static final ModConfigSpec.ConfigValue<String> CARD_PANEL_BORDER_COLOR = colorValue(
-            "card.panel.borderColor", "0xFFFFFF", "Border color for offer cards.");
+            "card.panel.borderColor", "0x777777", "Border color for offer cards.");
     public static final ModConfigSpec.IntValue CARD_PANEL_BORDER_THICKNESS = BUILDER
             .comment("Border thickness for offer cards in pixels.")
-            .defineInRange("card.panel.borderThickness", 2, 0, 8);
+            .defineInRange("card.panel.borderThickness", 1, 0, 8);
 
     public static final ModConfigSpec.ConfigValue<String> CARD_BUTTON_BACKGROUND_COLOR = colorValue(
-            "card.button.backgroundColor", "0x111111", "Base RGB color for offer buttons.");
+            "card.button.backgroundColor", "0x222222", "Base RGB color for offer buttons.");
     public static final ModConfigSpec.DoubleValue CARD_BUTTON_BACKGROUND_OPACITY = opacityValue(
-            "card.button.backgroundOpacity", 0.8d, "Opacity (0-1) applied to offer buttons.");
+            "card.button.backgroundOpacity", 0.2d, "Opacity (0-1) applied to offer buttons.");
     public static final ModConfigSpec.ConfigValue<String> CARD_BUTTON_BACKGROUND_COLOR_HOVER = colorValue(
-            "card.button.backgroundColorHover", "0x222222",
+            "card.button.backgroundColorHover", "0x555555",
             "Background RGB color for hovered offer buttons.");
     public static final ModConfigSpec.DoubleValue CARD_BUTTON_BACKGROUND_OPACITY_HOVER = opacityValue(
-            "card.button.backgroundOpacityHover", 0.87d,
+            "card.button.backgroundOpacityHover", 1.0d,
             "Opacity (0-1) applied to hovered offer buttons.");
     public static final ModConfigSpec.ConfigValue<String> CARD_BUTTON_BACKGROUND_COLOR_DISABLED = colorValue(
-            "card.button.backgroundColorDisabled", "0x2C2C2C",
+            "card.button.backgroundColorDisabled", "0x3C3C3C",
             "Background RGB color for disabled offer buttons.");
     public static final ModConfigSpec.DoubleValue CARD_BUTTON_BACKGROUND_OPACITY_DISABLED = opacityValue(
             "card.button.backgroundOpacityDisabled", 0.67d,
             "Opacity (0-1) applied to disabled offer buttons.");
 
     public static final ModConfigSpec.ConfigValue<String> CARD_BUTTON_BORDER_COLOR = colorValue(
-            "card.button.borderColor", "0xFFFFFF", "Border color for offer buttons.");
+            "card.button.borderColor", "0x282828", "Border color for offer buttons.");
     public static final ModConfigSpec.ConfigValue<String> CARD_BUTTON_BORDER_COLOR_HOVER = colorValue(
             "card.button.borderColorHover", "0xFFFFFF", "Border color for hovered offer buttons.");
     public static final ModConfigSpec.IntValue CARD_BUTTON_BORDER_THICKNESS = BUILDER
