@@ -317,15 +317,16 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         graphics.fill(leftPos, topPos, leftPos + borderThickness, bottom, style.guiBorderColor());
         graphics.fill(right - borderThickness, topPos, right, bottom, style.guiBorderColor());
 
-        int categoryBackgroundRight = Math.min(innerRight, categoryRight);
+        int dividerX = Math.min(right - borderThickness, categoryRight + (COLUMN_GAP / 2));
+
+        int categoryBackgroundRight = Math.min(innerRight, dividerX);
         graphics.fill(innerLeft, innerTop, categoryBackgroundRight, innerBottom, style.categoryPanelBackground());
 
-        int itemBackgroundLeft = Math.max(innerLeft, categoryBackgroundRight + COLUMN_GAP);
+        int itemBackgroundLeft = Math.max(innerLeft, dividerX);
         if (itemBackgroundLeft < innerRight) {
             graphics.fill(itemBackgroundLeft, innerTop, innerRight, innerBottom, style.itemPanelBackground());
         }
 
-        int dividerX = Math.min(right - borderThickness, categoryRight + (COLUMN_GAP / 2));
         graphics.fill(dividerX, innerTop, dividerX + borderThickness, innerBottom, style.guiBorderColor());
     }
 
