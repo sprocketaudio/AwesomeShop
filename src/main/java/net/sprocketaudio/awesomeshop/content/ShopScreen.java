@@ -58,6 +58,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private int originalGuiScale = -1;
 
     private final int[] selectedQuantities;
+    private final boolean[] engagedOffers;
     private final Map<Integer, Button> minusButtons = new HashMap<>();
     private final Map<Integer, Button> plusButtons = new HashMap<>();
     private final Map<Integer, Button> purchaseButtons = new HashMap<>();
@@ -74,6 +75,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     public ShopScreen(ShopMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
         this.selectedQuantities = new int[menu.getOffers().size()];
+        this.engagedOffers = new boolean[menu.getOffers().size()];
         Arrays.fill(this.selectedQuantities, 1);
         this.categories = new ArrayList<>(menu.getCategories());
         if (this.categories.isEmpty()) {
@@ -198,6 +200,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         }
 
         selectedQuantities[index] = Math.max(1, selectedQuantities[index] + delta);
+        engagedOffers[index] = true;
         reconcileQuantities();
     }
 
@@ -741,6 +744,9 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             }
             if (i >= selectedQuantities.length) {
                 break;
+            }
+            if (!engagedOffers[i]) {
+                continue;
             }
             int quantity = selectedQuantities[i];
             if (quantity <= 0) {
