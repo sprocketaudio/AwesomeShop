@@ -863,7 +863,8 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
                 background = style.categoryButtonBackground();
             }
             graphics.fill(getX(), getY(), getX() + width, getY() + height, background);
-            int outlineColor = hovered ? style.categoryButtonBorderHoverColor() : style.categoryButtonBorderColor();
+            int outlineColor = isSelected() ? style.categoryButtonBorderSelectedColor()
+                    : hovered ? style.categoryButtonBorderHoverColor() : style.categoryButtonBorderColor();
             renderButtonOutline(graphics, getX(), getY(), width, height, getCategoryButtonBorderThickness(), outlineColor);
 
             int textY = getY() + (height - font.lineHeight) / 2;

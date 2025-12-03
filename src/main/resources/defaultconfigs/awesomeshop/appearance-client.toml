@@ -32,10 +32,12 @@
     background = "0x111111"
     # Opacity (0-1) applied to unselected category buttons.
     backgroundOpacity = 0.8
-    # Border color for category buttons in their normal state.
+    # Border color for unselected category buttons in their normal state.
     borderColor = "0xFFFFFF"
     # Border color for category buttons when hovered.
     borderColorHover = "0xFFFFFF"
+    # Border color for selected category buttons.
+    borderColorSelected = "0xFFFFFF"
     # Border thickness for category buttons in pixels.
     borderThickness = 1
     # Text color for unselected category buttons.

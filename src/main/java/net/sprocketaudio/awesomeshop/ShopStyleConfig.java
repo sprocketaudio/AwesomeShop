@@ -45,10 +45,13 @@ public class ShopStyleConfig {
 
     public static final ModConfigSpec.ConfigValue<String> CATEGORY_BUTTON_BORDER_COLOR = colorValue(
             "category.button.borderColor", "0xFFFFFF",
-            "Border color for category buttons in their normal state.");
+            "Border color for unselected category buttons in their normal state.");
     public static final ModConfigSpec.ConfigValue<String> CATEGORY_BUTTON_BORDER_COLOR_HOVER = colorValue(
             "category.button.borderColorHover", "0xFFFFFF",
             "Border color for category buttons when hovered.");
+    public static final ModConfigSpec.ConfigValue<String> CATEGORY_BUTTON_BORDER_COLOR_SELECTED = colorValue(
+            "category.button.borderColorSelected", "0xFFFFFF",
+            "Border color for selected category buttons.");
     public static final ModConfigSpec.IntValue CATEGORY_BUTTON_BORDER_THICKNESS = BUILDER
             .comment("Border thickness for category buttons in pixels.")
             .defineInRange("category.button.borderThickness", 1, 0, 6);
@@ -128,6 +131,8 @@ public class ShopStyleConfig {
                         "category.button.background"),
                 composeColor(CATEGORY_BUTTON_BORDER_COLOR.get(), 1.0d, "category.button.borderColor"),
                 composeColor(CATEGORY_BUTTON_BORDER_COLOR_HOVER.get(), 1.0d, "category.button.borderColorHover"),
+                composeColor(CATEGORY_BUTTON_BORDER_COLOR_SELECTED.get(), 1.0d,
+                        "category.button.borderColorSelected"),
                 CATEGORY_BUTTON_BORDER_THICKNESS.get(),
                 composeColor(CATEGORY_TITLE_TEXT_COLOR.get(), 1.0d, "category.titleTextColor"),
                 composeColor(CATEGORY_BUTTON_TEXT_COLOR_SELECTED.get(), 1.0d, "category.button.text.selected"),
@@ -198,9 +203,9 @@ public class ShopStyleConfig {
     public record ShopStyle(int guiBorderColor, int guiBorderThickness, int categoryPanelBackground,
             int itemPanelBackground, int categoryButtonSelectedBackground, int categoryButtonHoverBackground,
             int categoryButtonBackground, int categoryButtonBorderColor, int categoryButtonBorderHoverColor,
-            int categoryButtonBorderThickness, int categoryTitleTextColor, int categoryButtonTextSelectedColor,
-            int categoryButtonTextHoverColor, int categoryButtonTextColor, int cardPanelBackground,
-            int cardPanelBorderColor, int cardPanelBorderThickness, int cardButtonBackground,
+            int categoryButtonBorderSelectedColor, int categoryButtonBorderThickness, int categoryTitleTextColor,
+            int categoryButtonTextSelectedColor, int categoryButtonTextHoverColor, int categoryButtonTextColor,
+            int cardPanelBackground, int cardPanelBorderColor, int cardPanelBorderThickness, int cardButtonBackground,
             int cardButtonHoverBackground, int cardButtonDisabledBackground, int cardButtonBorderColor,
             int cardButtonBorderHoverColor, int cardButtonBorderThickness, int cardItemTextColor,
             int cardButtonTextColor, int cardButtonTextHoverColor, int cardButtonTextDisabledColor) {
