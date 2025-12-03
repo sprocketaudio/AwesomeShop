@@ -243,11 +243,15 @@ public class Config {
         if (!trimmed.isEmpty() && categories.contains(trimmed)) {
             return trimmed;
         }
+        String fallback = categories.isEmpty() ? "default" : categories.get(0);
         if (!trimmed.isEmpty()) {
-            AwesomeShop.LOGGER.warn("Category '{}' is not configured; defaulting to '{}'.", trimmed,
-                    categories.isEmpty() ? "default" : categories.get(0));
+            AwesomeShop.LOGGER.warn("Category '{}' is not configured; defaulting to '{}'.", trimmed, fallback);
+        } else {
+            AwesomeShop.LOGGER.warn(
+                    "No category was provided for an offer entry; add a category between the item id and price section (e.g. 'minecraft:apple|cat1|minecraft:emerald=1'). Defaulting to '{}'.",
+                    fallback);
         }
-        return categories.isEmpty() ? "default" : categories.get(0);
+        return fallback;
     }
 
     private record RawRequirement(ResourceLocation id, int price) {
