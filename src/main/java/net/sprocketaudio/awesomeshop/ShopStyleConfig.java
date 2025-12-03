@@ -97,7 +97,7 @@ public class ShopStyleConfig {
             "Opacity (0-1) applied to disabled offer buttons.");
 
     public static final ModConfigSpec.ConfigValue<String> CARD_BUTTON_BORDER_COLOR = colorValue(
-            "card.button.borderColor", "0x282828", "Border color for offer buttons.");
+            "card.button.borderColor", "0xAAAAAA", "Border color for offer buttons.");
     public static final ModConfigSpec.ConfigValue<String> CARD_BUTTON_BORDER_COLOR_HOVER = colorValue(
             "card.button.borderColorHover", "0xFFFFFF", "Border color for hovered offer buttons.");
     public static final ModConfigSpec.ConfigValue<String> CARD_BUTTON_BORDER_COLOR_DISABLED = colorValue(
