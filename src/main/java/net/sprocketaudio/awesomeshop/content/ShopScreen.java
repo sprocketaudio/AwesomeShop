@@ -721,16 +721,24 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
                 return;
             }
 
+            int viewportLeft = getShopColumnLeft();
+            int viewportRight = leftPos + imageWidth - PADDING;
+            int viewportTop = getOffersStartY();
+            int viewportBottom = topPos + imageHeight - PADDING;
+
+            graphics.enableScissor(viewportLeft, viewportTop, viewportRight, viewportBottom);
             int background = isHoveredOrFocused() ? BUTTON_HOVER_COLOR : BUTTON_BASE_COLOR;
             graphics.fill(getX(), getY(), getX() + width, getY() + height, background);
             int textY = getY() + (height - font.lineHeight) / 2;
             int textColor = active ? 0xFFFFFFFF : 0xFFB5B5B5;
             graphics.drawCenteredString(font, getMessage(), getX() + (width / 2), textY, textColor);
+            graphics.disableScissor();
         }
 
         @Override
         public boolean isMouseOver(double mouseX, double mouseY) {
-            return super.isMouseOver(mouseX, mouseY) && isWithinOffersViewport(this);
+            return super.isMouseOver(mouseX, mouseY)
+                    && isWithinOffersViewport((int) mouseX, (int) mouseY, 1, 1);
         }
     }
 
@@ -753,6 +761,12 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
                 return;
             }
 
+            int viewportLeft = leftPos + PADDING;
+            int viewportRight = leftPos + getCategoryColumnWidth() - PADDING;
+            int viewportTop = getCategoryButtonsStartY();
+            int viewportBottom = topPos + imageHeight - PADDING;
+
+            graphics.enableScissor(viewportLeft, viewportTop, viewportRight, viewportBottom);
             int background = isHoveredOrFocused() ? BUTTON_HOVER_COLOR : BUTTON_BASE_COLOR;
             graphics.fill(getX(), getY(), getX() + width, getY() + height, background);
 
@@ -760,11 +774,13 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             int textX = getX() + TEXT_PADDING;
             int textColor = isSelected() ? 0xFFFFFFFF : 0xFFB5B5B5;
             graphics.drawString(font, getMessage(), textX, textY, textColor);
+            graphics.disableScissor();
         }
 
         @Override
         public boolean isMouseOver(double mouseX, double mouseY) {
-            return super.isMouseOver(mouseX, mouseY) && isWithinCategoryViewport(this);
+            return super.isMouseOver(mouseX, mouseY)
+                    && isWithinCategoryViewport((int) mouseX, (int) mouseY, 1, 1);
         }
     }
 
