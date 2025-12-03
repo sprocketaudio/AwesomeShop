@@ -44,7 +44,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private static final int CARD_FILL_COLOR = 0xEE161616;
     private static final int BUTTON_BASE_COLOR = 0xFF6E6E6E;
     private static final int BUTTON_HOVER_COLOR = 0xFF858585;
-    private static final int CURRENCY_GAP = 10;
+    private static final int CURRENCY_GAP = 8;
     private static final int ITEM_ICON_SIZE = 24;
 
     private int lockedGuiScale = -1;
