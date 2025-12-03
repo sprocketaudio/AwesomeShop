@@ -41,6 +41,8 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private static final int PANEL_BORDER_COLOR = 0xCCFFFFFF;
     private static final int PANEL_FILL_COLOR = 0xEE161616;
     private static final int CARD_FILL_COLOR = 0xEE161616;
+    private static final int BUTTON_BASE_COLOR = 0xEE202020;
+    private static final int BUTTON_HOVER_COLOR = 0xEE2A2A2A;
     private static final int CURRENCY_GAP = 10;
     private static final int ITEM_ICON_SIZE = 24;
 
@@ -330,8 +332,8 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
 
     @Override
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
-        int centerX = leftPos + (imageWidth / 2);
-        int titleY = getTopRowY();
+        int centerX = imageWidth / 2;
+        int titleY = getTopRowY() - topPos;
         graphics.drawCenteredString(font, title, centerX, titleY, 0xFFFFFF);
     }
 
@@ -489,16 +491,13 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     }
 
     private class SolidButton extends Button {
-        private static final int BASE_COLOR = 0xFF6C6C6C;
-        private static final int HOVER_COLOR = 0xFF7A7A7A;
-
         SolidButton(int x, int y, int width, int height, Component label, OnPress onPress) {
             super(x, y, width, height, label, onPress, DEFAULT_NARRATION);
         }
 
         @Override
         public void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-            int background = isHoveredOrFocused() ? HOVER_COLOR : BASE_COLOR;
+            int background = isHoveredOrFocused() ? BUTTON_HOVER_COLOR : BUTTON_BASE_COLOR;
             graphics.fill(getX(), getY(), getX() + width, getY() + height, background);
             int textY = getY() + (height - font.lineHeight) / 2;
             int textColor = active ? 0xFFFFFFFF : 0xFFBBBBBB;
