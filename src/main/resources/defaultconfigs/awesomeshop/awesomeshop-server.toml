@@ -1,5 +1,5 @@
 # Server configuration for AwesomeShop.
-# This file will be copied to the server config directory if it doesn't exist.
+# This file will be copied to config/awesomeshop/awesomeshop-server.toml if it doesn't exist.
 
 # Display name shown above the shop GUI. Leave blank to use the default block name.
 shopName = "Awesome Shop"
