@@ -41,10 +41,12 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private static final int PANEL_BORDER_COLOR = 0xCCFFFFFF;
     private static final int PANEL_FILL_COLOR = 0xEE161616;
     private static final int CARD_FILL_COLOR = 0xEE161616;
-    private static final int BUTTON_BASE_COLOR = 0xFF6E6E6E;
-    private static final int BUTTON_HOVER_COLOR = 0xFF9C9C9C;
-    private static final int BUTTON_DISABLED_COLOR = 0xFF3A3A3A;
-    private static final int BUTTON_DISABLED_TEXT_COLOR = 0xFF7A7A7A;
+    private static final int BUTTON_BASE_COLOR = 0xCC111111;
+    private static final int BUTTON_HOVER_COLOR = 0xDD222222;
+    private static final int BUTTON_DISABLED_COLOR = 0xAA2C2C2C;
+    private static final int BUTTON_DISABLED_TEXT_COLOR = 0xFF666666;
+    private static final int BUTTON_OUTLINE_COLOR = 0xCCFFFFFF;
+    private static final int BUTTON_OUTLINE_THICKNESS = 1;
     private static final int CURRENCY_GAP = 8;
     private static final int ITEM_ICON_SIZE = 24;
     private static final int SCROLLBAR_WIDTH = 8;
@@ -114,7 +116,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         int contentHeight = calculateContentHeight();
         int maxHeight = this.height - (PADDING * 2);
         int targetHeight = (int) (this.height * GUI_HEIGHT_RATIO);
-        this.imageHeight = Mth.clamp(Math.min(calculateImageHeight(contentHeight), targetHeight), 140, maxHeight);
+        this.imageHeight = Mth.clamp(targetHeight, 140, maxHeight);
         this.topPos = Math.max(PADDING, (this.height - this.imageHeight) / 2);
         updateScrollBounds(contentHeight);
         updateCategoryScrollBounds();
@@ -758,6 +760,17 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         return Math.max(0, maxAffordable);
     }
 
+    private void renderButtonOutline(GuiGraphics graphics, int x, int y, int width, int height) {
+        if (width <= 0 || height <= 0) {
+            return;
+        }
+        int thickness = Math.max(1, Math.min(BUTTON_OUTLINE_THICKNESS, Math.min(width, height) / 2));
+        graphics.fill(x, y, x + width, y + thickness, BUTTON_OUTLINE_COLOR);
+        graphics.fill(x, y + height - thickness, x + width, y + height, BUTTON_OUTLINE_COLOR);
+        graphics.fill(x, y, x + thickness, y + height, BUTTON_OUTLINE_COLOR);
+        graphics.fill(x + width - thickness, y, x + width, y + height, BUTTON_OUTLINE_COLOR);
+    }
+
     private class SolidButton extends Button {
         SolidButton(int x, int y, int width, int height, Component label, OnPress onPress) {
             super(x, y, width, height, label, onPress, DEFAULT_NARRATION);
@@ -778,6 +791,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             boolean hovered = active && isHoveredOrFocused();
             int background = !active ? BUTTON_DISABLED_COLOR : hovered ? BUTTON_HOVER_COLOR : BUTTON_BASE_COLOR;
             graphics.fill(getX(), getY(), getX() + width, getY() + height, background);
+            renderButtonOutline(graphics, getX(), getY(), width, height);
             int textY = getY() + (height - font.lineHeight) / 2;
             int textColor = active ? 0xFFFFFFFF : BUTTON_DISABLED_TEXT_COLOR;
             graphics.drawCenteredString(font, getMessage(), getX() + (width / 2), textY, textColor);
@@ -818,10 +832,11 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             graphics.enableScissor(viewportLeft, viewportTop, viewportRight, viewportBottom);
             int background = isHoveredOrFocused() ? BUTTON_HOVER_COLOR : BUTTON_BASE_COLOR;
             graphics.fill(getX(), getY(), getX() + width, getY() + height, background);
+            renderButtonOutline(graphics, getX(), getY(), width, height);
 
             int textY = getY() + (height - font.lineHeight) / 2;
             int textX = getX() + TEXT_PADDING;
-            int textColor = isSelected() ? 0xFFFFFFFF : 0xFFB5B5B5;
+            int textColor = 0xFFFFFFFF;
             graphics.drawString(font, getMessage(), textX, textY, textColor);
             graphics.disableScissor();
         }
