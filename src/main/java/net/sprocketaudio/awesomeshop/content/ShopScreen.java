@@ -460,7 +460,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         StringBuilder builder = new StringBuilder();
         for (int i = 0; i < requirements.size(); i++) {
             PriceRequirement requirement = requirements.get(i);
-            builder.append("x ").append(quantity * requirement.price());
+            builder.append(quantity * requirement.price());
             if (i < requirements.size() - 1) {
                 builder.append("  |  ");
             }
