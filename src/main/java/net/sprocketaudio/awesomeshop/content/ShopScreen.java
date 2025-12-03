@@ -294,17 +294,22 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             int currencyStartX = cardCenterX - (totalCurrencyWidth / 2);
             int currentX = currencyStartX;
 
+            List<Integer> currencyCenters = new ArrayList<>(requirements.size());
             for (PriceRequirement requirement : requirements) {
                 ItemStack currencyStack = new ItemStack(requirement.currency().item());
                 graphics.renderItem(currencyStack, currentX, currenciesY);
                 graphics.renderItemDecorations(font, currencyStack, currentX, currenciesY);
+                currencyCenters.add(currentX + 8);
                 currentX += 16 + CURRENCY_GAP;
             }
 
             int quantity = selectedQuantities[index];
-            Component priceLine = buildPriceLine(requirements, quantity);
             int priceY = getPriceRowY(cardY);
-            graphics.drawCenteredString(font, priceLine, cardCenterX, priceY, 0xDDDDDD);
+            for (int i = 0; i < requirements.size(); i++) {
+                PriceRequirement requirement = requirements.get(i);
+                String costText = Integer.toString(quantity * requirement.price());
+                graphics.drawCenteredString(font, Component.literal(costText), currencyCenters.get(i), priceY, 0xDDDDDD);
+            }
         }
     }
 
@@ -454,18 +459,6 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             }
         }
         return total;
-    }
-
-    private Component buildPriceLine(List<PriceRequirement> requirements, int quantity) {
-        StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < requirements.size(); i++) {
-            PriceRequirement requirement = requirements.get(i);
-            builder.append(quantity * requirement.price());
-            if (i < requirements.size() - 1) {
-                builder.append("  |  ");
-            }
-        }
-        return Component.literal(builder.toString());
     }
 
     private int getColumns() {
