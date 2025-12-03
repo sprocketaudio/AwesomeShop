@@ -41,8 +41,8 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private static final int PANEL_BORDER_COLOR = 0xCCFFFFFF;
     private static final int PANEL_FILL_COLOR = 0xEE161616;
     private static final int CARD_FILL_COLOR = 0xEE161616;
-    private static final int BUTTON_BASE_COLOR = 0xFFD4D4D4;
-    private static final int BUTTON_HOVER_COLOR = 0xFFE4E4E4;
+    private static final int BUTTON_BASE_COLOR = 0xFF6E6E6E;
+    private static final int BUTTON_HOVER_COLOR = 0xFF858585;
     private static final int CURRENCY_GAP = 10;
     private static final int ITEM_ICON_SIZE = 24;
 
@@ -500,7 +500,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             int background = isHoveredOrFocused() ? BUTTON_HOVER_COLOR : BUTTON_BASE_COLOR;
             graphics.fill(getX(), getY(), getX() + width, getY() + height, background);
             int textY = getY() + (height - font.lineHeight) / 2;
-            int textColor = active ? 0xFF111111 : 0xFF555555;
+            int textColor = active ? 0xFFFFFFFF : 0xFFB5B5B5;
             graphics.drawCenteredString(font, getMessage(), getX() + (width / 2), textY, textColor);
         }
     }
