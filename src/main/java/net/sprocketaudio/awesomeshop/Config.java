@@ -20,6 +20,7 @@ import net.sprocketaudio.awesomeshop.AwesomeShop;
 // An example config class. This is not required, but it's a good idea to have one to keep your config organized.
 // Demonstrates how to use Neo's config APIs
 public class Config {
+    private static final int MAX_CURRENCIES = 5;
     private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
 
     public static final ModConfigSpec.ConfigValue<List<? extends String>> CATEGORIES = BUILDER
@@ -28,7 +29,7 @@ public class Config {
                     Config::validateCategoryName);
 
     public static final ModConfigSpec.ConfigValue<List<? extends String>> CURRENCIES = BUILDER
-            .comment("Items that can be used as currency for shop transactions.",
+            .comment("Items that can be used as currency for shop transactions (max " + MAX_CURRENCIES + ".)",
                     "Format: namespace:item", "Example: minecraft:emerald")
             .defineListAllowEmpty("currencies", List.of("minecraft:emerald", "minecraft:gold_ingot"), () -> "",
                     Config::validateItemName);
@@ -36,7 +37,8 @@ public class Config {
     public static final ModConfigSpec.ConfigValue<List<? extends String>> SHOP_OFFERS = BUILDER
             .comment(
                     "Items that can be purchased from the shop block along with their prices, currencies, and categories.",
-                    "Format: namespace:item|category|currency=price[,currency=price]",
+                    "Format: namespace:item|category|currency=price[,currency=price] (up to " + MAX_CURRENCIES
+                            + " currency entries)",
                     "Example: minecraft:apple|produce|minecraft:emerald=2,minecraft:gold_ingot=1")
             .defineListAllowEmpty("shopOffers",
                     List.of("minecraft:apple|cat1|minecraft:emerald=1", "minecraft:bread|cat1|minecraft:gold_ingot=2"),
@@ -61,7 +63,8 @@ public class Config {
     }
 
     public static List<ConfiguredCurrency> getConfiguredCurrencies() {
-        ArrayList<ConfiguredCurrency> currencies = CURRENCIES.get().stream()
+        List<String> configuredEntries = limitEntries(CURRENCIES.get(), "currencies");
+        ArrayList<ConfiguredCurrency> currencies = configuredEntries.stream()
                 .map(Config::parseCurrency)
                 .flatMap(Optional::stream)
                 .collect(Collectors.toCollection(ArrayList::new));
@@ -275,10 +278,24 @@ public class Config {
     private static List<RawRequirement> parsePriceRequirements(String priceSection, String rawOffer) {
         List<RawRequirement> requirements = new ArrayList<>();
         String[] entries = priceSection.split(",");
-        for (String entry : entries) {
-            parseRequirement(entry.trim(), rawOffer).ifPresent(requirements::add);
+        for (int i = 0; i < entries.length; i++) {
+            if (i >= MAX_CURRENCIES) {
+                AwesomeShop.LOGGER.warn(
+                        "Ignoring extra currency entry '{}' in shop offer '{}'; only the first {} currencies are used.",
+                        entries[i], rawOffer, MAX_CURRENCIES);
+                continue;
+            }
+            parseRequirement(entries[i].trim(), rawOffer).ifPresent(requirements::add);
         }
         return requirements;
+    }
+
+    private static List<String> limitEntries(List<? extends String> entries, String configKey) {
+        if (entries.size() > MAX_CURRENCIES) {
+            AwesomeShop.LOGGER.warn("Using only the first {} entries of '{}' and ignoring the remaining {} entries.",
+                    MAX_CURRENCIES, configKey, entries.size() - MAX_CURRENCIES);
+        }
+        return entries.stream().limit(MAX_CURRENCIES).map(String::valueOf).toList();
     }
 
     private static Optional<RawRequirement> parseRequirement(String entry, String rawOffer) {

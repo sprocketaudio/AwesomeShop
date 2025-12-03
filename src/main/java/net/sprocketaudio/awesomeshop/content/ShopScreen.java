@@ -56,6 +56,8 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private int originalGuiScale = -1;
 
     private final int[] selectedQuantities;
+    private final Map<Integer, Button> minusButtons = new HashMap<>();
+    private final Map<Integer, Button> plusButtons = new HashMap<>();
     private final Map<Integer, Button> purchaseButtons = new HashMap<>();
     private final List<Button> offerButtons = new ArrayList<>();
     private final Map<String, Button> categoryButtons = new HashMap<>();
@@ -99,6 +101,8 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
 
     private void rebuildLayout() {
         clearWidgets();
+        minusButtons.clear();
+        plusButtons.clear();
         purchaseButtons.clear();
         offerButtons.clear();
         categoryButtons.clear();
@@ -118,6 +122,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
 
         placeCategoryButtons();
         placeOfferButtons();
+        reconcileQuantities();
     }
 
     private void placeOfferButtons() {
@@ -132,11 +137,13 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             Button minusButton = createTintedButton(minusX, quantityButtonY, BUTTON_WIDTH, BUTTON_HEIGHT, Component.literal("-"),
                     b -> adjustQuantity(index, -1));
             minusButton.visible = visible;
+            minusButtons.put(index, minusButton);
             offerButtons.add(addRenderableWidget(minusButton));
 
             Button plusButton = createTintedButton(plusX, quantityButtonY, BUTTON_WIDTH, BUTTON_HEIGHT, Component.literal("+"),
                     b -> adjustQuantity(index, 1));
             plusButton.visible = visible;
+            plusButtons.put(index, plusButton);
             offerButtons.add(addRenderableWidget(plusButton));
 
             int purchaseY = quantityButtonY + BUTTON_HEIGHT + BUTTON_GAP;
@@ -173,9 +180,9 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             int buttonId = (quantity * menu.getOffers().size()) + index;
             minecraft.gameMode.handleInventoryButtonClick(menu.containerId, buttonId);
             ConfiguredOffer offer = menu.getOffers().get(index);
-            int maxAffordable = calculateMaxAffordable(offer);
-            selectedQuantities[index] = Math.min(Math.max(1, quantity), maxAffordable);
-            adjustQuantity(index, 0);
+            int maxAffordable = calculateMaxAffordable(index);
+            selectedQuantities[index] = Math.min(Math.max(0, quantity), Math.max(0, maxAffordable));
+            reconcileQuantities();
         }
     }
 
@@ -185,12 +192,8 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             return;
         }
 
-        ConfiguredOffer offer = offers.get(index);
-        int maxAffordable = calculateMaxAffordable(offer);
-        int minQuantity = maxAffordable > 0 ? 1 : 0;
-        int newQuantity = Mth.clamp(selectedQuantities[index] + delta, minQuantity, maxAffordable);
-        selectedQuantities[index] = newQuantity;
-        updatePurchaseButton(index);
+        selectedQuantities[index] = Math.max(0, selectedQuantities[index] + delta);
+        reconcileQuantities();
     }
 
     private void selectCategory(String category) {
@@ -209,9 +212,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     @Override
     public void containerTick() {
         super.containerTick();
-        for (int i = 0; i < selectedQuantities.length; i++) {
-            adjustQuantity(i, 0);
-        }
+        reconcileQuantities();
     }
 
     private void updatePurchaseButton(int index) {
@@ -223,6 +224,28 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         ConfiguredOffer offer = menu.getOffers().get(index);
         button.setMessage(Component.translatable("screen.awesomeshop.shop_block.buy", quantity, offer.item().getHoverName()));
         button.active = quantity > 0;
+    }
+
+    private void reconcileQuantities() {
+        for (int i = 0; i < selectedQuantities.length; i++) {
+            int maxAffordable = calculateMaxAffordable(i);
+            int clampedQuantity = Mth.clamp(selectedQuantities[i], 0, maxAffordable);
+            selectedQuantities[i] = clampedQuantity;
+            updatePurchaseButton(i);
+            updateQuantityButtons(i, maxAffordable);
+        }
+    }
+
+    private void updateQuantityButtons(int index, int maxAffordable) {
+        Button minusButton = minusButtons.get(index);
+        Button plusButton = plusButtons.get(index);
+        int quantity = index < selectedQuantities.length ? selectedQuantities[index] : 0;
+        if (minusButton != null) {
+            minusButton.active = quantity > 0;
+        }
+        if (plusButton != null) {
+            plusButton.active = quantity < maxAffordable;
+        }
     }
 
     private Button createTintedButton(int x, int y, int width, int height, Component label, Button.OnPress onPress) {
@@ -694,15 +717,54 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         return cardStartY + CARD_PADDING + font.lineHeight + 2 + ITEM_ICON_SIZE + 6 + 18;
     }
 
-    private int calculateMaxAffordable(ConfiguredOffer offer) {
+    private int calculateMaxAffordable(int offerIndex) {
+        List<ConfiguredOffer> offers = menu.getOffers();
+        if (offerIndex < 0 || offerIndex >= offers.size()) {
+            return 0;
+        }
+
+        Map<ConfiguredCurrency, Integer> reserved = calculateReservedCurrencyExcluding(offerIndex);
+        return calculateMaxAffordable(offers.get(offerIndex), reserved);
+    }
+
+    private Map<ConfiguredCurrency, Integer> calculateReservedCurrencyExcluding(int excludedIndex) {
+        Map<ConfiguredCurrency, Integer> reserved = new HashMap<>();
+        List<ConfiguredOffer> offers = menu.getOffers();
+        for (int i = 0; i < offers.size(); i++) {
+            if (i == excludedIndex) {
+                continue;
+            }
+            if (i >= selectedQuantities.length) {
+                break;
+            }
+            int quantity = selectedQuantities[i];
+            if (quantity <= 0) {
+                continue;
+            }
+            for (Map.Entry<ConfiguredCurrency, Integer> entry : Config.aggregatePriceRequirements(offers.get(i).prices())
+                    .entrySet()) {
+                int total = entry.getValue() * quantity;
+                if (total > 0) {
+                    reserved.merge(entry.getKey(), total, Integer::sum);
+                }
+            }
+        }
+        return reserved;
+    }
+
+    private int calculateMaxAffordable(ConfiguredOffer offer, Map<ConfiguredCurrency, Integer> reserved) {
         int maxAffordable = Integer.MAX_VALUE;
-        for (Map.Entry<ConfiguredCurrency, Integer> entry : Config.aggregatePriceRequirements(offer.prices()).entrySet()) {
+        Map<ConfiguredCurrency, Integer> prices = Config.aggregatePriceRequirements(offer.prices());
+        if (prices.isEmpty()) {
+            return 0;
+        }
+        for (Map.Entry<ConfiguredCurrency, Integer> entry : prices.entrySet()) {
             int priceEach = entry.getValue();
             if (priceEach <= 0) {
                 continue;
             }
-            int available = menu.getCurrencyCount(entry.getKey());
-            maxAffordable = Math.min(maxAffordable, available / priceEach);
+            int available = menu.getCurrencyCount(entry.getKey()) - reserved.getOrDefault(entry.getKey(), 0);
+            maxAffordable = Math.min(maxAffordable, Math.max(0, available) / priceEach);
         }
         if (maxAffordable == Integer.MAX_VALUE) {
             return 0;

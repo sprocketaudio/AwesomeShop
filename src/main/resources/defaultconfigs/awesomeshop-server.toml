@@ -1,7 +1,7 @@
 # Server configuration for AwesomeShop.
 # This file will be copied to the server config directory if it doesn't exist.
 
-# Items used as currency for shop transactions.
+# Items used as currency for shop transactions (up to 5 entries; extras are ignored).
 currencies = [
     "minecraft:emerald",
     "minecraft:gold_ingot",
@@ -15,7 +15,7 @@ categories = [
 ]
 
 # Items that can be purchased from the shop block along with their prices, currencies, and categories.
-# Each entry uses the format: namespace:item|category|currency=price[,currency=price]
+# Each entry uses the format: namespace:item|category|currency=price[,currency=price] and can list up to 5 currencies.
 # The category sits between the item id and the price section. For example, the first offer below assigns the apple
 # to the "cat1" category.
 shopOffers = [
