@@ -28,7 +28,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private static final int PURCHASE_BUTTON_WIDTH = 100;
     private static final int CATEGORY_BUTTON_HEIGHT = 26;
     private static final int CATEGORY_TITLE_GAP = 6;
-    private static final int CATEGORY_BUTTON_Y_OFFSET = 6;
+    private static final int CATEGORY_BUTTON_Y_OFFSET = 18;
     private static final int COLUMN_GAP = 10;
     private static final int MIN_IMAGE_WIDTH = 320;
     private static final float GUI_WIDTH_RATIO = 0.8f;
@@ -406,9 +406,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     }
 
     private int getOffersStartY() {
-        int categoryButtonSpace = Math.max(0, categories.size() * (CATEGORY_BUTTON_HEIGHT + BUTTON_GAP) - BUTTON_GAP);
-        int categoryBottom = getCategoryButtonsStartY() + categoryButtonSpace;
-        return Math.max(getCategoryButtonsStartY(), categoryBottom + PADDING);
+        return getCategoryButtonsStartY();
     }
 
     private List<OfferCard> buildCards() {
