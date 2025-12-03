@@ -44,7 +44,9 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private static final int PANEL_FILL_COLOR = 0xEE161616;
     private static final int CARD_FILL_COLOR = 0xEE161616;
     private static final int BUTTON_BASE_COLOR = 0xFF6E6E6E;
-    private static final int BUTTON_HOVER_COLOR = 0xFF858585;
+    private static final int BUTTON_HOVER_COLOR = 0xFF9C9C9C;
+    private static final int BUTTON_DISABLED_COLOR = 0xFF3A3A3A;
+    private static final int BUTTON_DISABLED_TEXT_COLOR = 0xFF7A7A7A;
     private static final int CURRENCY_GAP = 8;
     private static final int ITEM_ICON_SIZE = 24;
     private static final int SCROLLBAR_WIDTH = 8;
@@ -153,7 +155,8 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             Button widget = addRenderableWidget(purchaseButton);
             purchaseButtons.put(index, widget);
             offerButtons.add(widget);
-            updatePurchaseButton(index);
+            int maxAffordable = calculateMaxAffordable(index);
+            updatePurchaseButton(index, maxAffordable);
         }
     }
 
@@ -174,14 +177,16 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private void purchaseOffer(int index) {
         if (minecraft != null && minecraft.gameMode != null) {
             int quantity = selectedQuantities[index];
-            if (quantity <= 0) {
+            int maxAffordable = calculateMaxAffordable(index);
+            if (quantity < 1 || maxAffordable < quantity) {
+                selectedQuantities[index] = Math.max(1, Math.min(quantity, Math.max(1, maxAffordable)));
+                reconcileQuantities();
                 return;
             }
             int buttonId = (quantity * menu.getOffers().size()) + index;
             minecraft.gameMode.handleInventoryButtonClick(menu.containerId, buttonId);
             ConfiguredOffer offer = menu.getOffers().get(index);
-            int maxAffordable = calculateMaxAffordable(index);
-            selectedQuantities[index] = Math.min(Math.max(0, quantity), Math.max(0, maxAffordable));
+            selectedQuantities[index] = Math.max(1, Math.min(quantity, Math.max(1, maxAffordable)));
             reconcileQuantities();
         }
     }
@@ -192,7 +197,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             return;
         }
 
-        selectedQuantities[index] = Math.max(0, selectedQuantities[index] + delta);
+        selectedQuantities[index] = Math.max(1, selectedQuantities[index] + delta);
         reconcileQuantities();
     }
 
@@ -215,7 +220,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         reconcileQuantities();
     }
 
-    private void updatePurchaseButton(int index) {
+    private void updatePurchaseButton(int index, int maxAffordable) {
         if (index < 0 || !purchaseButtons.containsKey(index)) {
             return;
         }
@@ -223,15 +228,15 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         int quantity = selectedQuantities[index];
         ConfiguredOffer offer = menu.getOffers().get(index);
         button.setMessage(Component.translatable("screen.awesomeshop.shop_block.buy", quantity, offer.item().getHoverName()));
-        button.active = quantity > 0;
+        button.active = maxAffordable >= quantity && quantity >= 1;
     }
 
     private void reconcileQuantities() {
         for (int i = 0; i < selectedQuantities.length; i++) {
             int maxAffordable = calculateMaxAffordable(i);
-            int clampedQuantity = Mth.clamp(selectedQuantities[i], 0, maxAffordable);
+            int clampedQuantity = Mth.clamp(selectedQuantities[i], 1, Math.max(1, maxAffordable));
             selectedQuantities[i] = clampedQuantity;
-            updatePurchaseButton(i);
+            updatePurchaseButton(i, maxAffordable);
             updateQuantityButtons(i, maxAffordable);
         }
     }
@@ -241,7 +246,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         Button plusButton = plusButtons.get(index);
         int quantity = index < selectedQuantities.length ? selectedQuantities[index] : 0;
         if (minusButton != null) {
-            minusButton.active = quantity > 0;
+            minusButton.active = quantity > 1;
         }
         if (plusButton != null) {
             plusButton.active = quantity < maxAffordable;
@@ -741,9 +746,14 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             if (quantity <= 0) {
                 continue;
             }
+            int maxAffordable = calculateMaxAffordable(offers.get(i), reserved);
+            if (maxAffordable <= 0) {
+                continue;
+            }
+            int effectiveQuantity = Math.min(quantity, maxAffordable);
             for (Map.Entry<ConfiguredCurrency, Integer> entry : Config.aggregatePriceRequirements(offers.get(i).prices())
                     .entrySet()) {
-                int total = entry.getValue() * quantity;
+                int total = entry.getValue() * effectiveQuantity;
                 if (total > 0) {
                     reserved.merge(entry.getKey(), total, Integer::sum);
                 }
@@ -789,10 +799,11 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             int viewportBottom = topPos + imageHeight - PADDING;
 
             graphics.enableScissor(viewportLeft, viewportTop, viewportRight, viewportBottom);
-            int background = isHoveredOrFocused() ? BUTTON_HOVER_COLOR : BUTTON_BASE_COLOR;
+            boolean hovered = active && isHoveredOrFocused();
+            int background = !active ? BUTTON_DISABLED_COLOR : hovered ? BUTTON_HOVER_COLOR : BUTTON_BASE_COLOR;
             graphics.fill(getX(), getY(), getX() + width, getY() + height, background);
             int textY = getY() + (height - font.lineHeight) / 2;
-            int textColor = active ? 0xFFFFFFFF : 0xFFB5B5B5;
+            int textColor = active ? 0xFFFFFFFF : BUTTON_DISABLED_TEXT_COLOR;
             graphics.drawCenteredString(font, getMessage(), getX() + (width / 2), textY, textColor);
             graphics.disableScissor();
         }
