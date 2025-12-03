@@ -223,16 +223,18 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private void renderPanels(GuiGraphics graphics) {
         int right = leftPos + imageWidth;
         int bottom = topPos + imageHeight;
+        int categoryRight = leftPos + getCategoryColumnWidth();
+        int shopLeft = categoryRight + COLUMN_GAP;
 
-        graphics.fill(leftPos, topPos, right, bottom, PANEL_FILL_COLOR);
+        // Panel frame
         graphics.fill(leftPos, topPos, right, topPos + BORDER_THICKNESS, PANEL_BORDER_COLOR);
         graphics.fill(leftPos, bottom - BORDER_THICKNESS, right, bottom, PANEL_BORDER_COLOR);
         graphics.fill(leftPos, topPos, leftPos + BORDER_THICKNESS, bottom, PANEL_BORDER_COLOR);
         graphics.fill(right - BORDER_THICKNESS, topPos, right, bottom, PANEL_BORDER_COLOR);
 
-        int categoryRight = leftPos + getCategoryColumnWidth();
-        int categoryBottom = topPos + imageHeight;
-        graphics.fill(leftPos, topPos, categoryRight, categoryBottom, PANEL_FILL_COLOR);
+        // Category and shop backgrounds (single opacity pass)
+        graphics.fill(leftPos, topPos, categoryRight, bottom, PANEL_FILL_COLOR);
+        graphics.fill(shopLeft, topPos, right, bottom, PANEL_FILL_COLOR);
 
         int dividerX = categoryRight + (COLUMN_GAP / 2);
         graphics.fill(dividerX, topPos, dividerX + BORDER_THICKNESS, bottom, PANEL_BORDER_COLOR);
@@ -485,8 +487,8 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     }
 
     private class SolidButton extends Button {
-        private static final int BASE_COLOR = 0xFF4A4A4A;
-        private static final int HOVER_COLOR = 0xFF595959;
+        private static final int BASE_COLOR = 0xFF6C6C6C;
+        private static final int HOVER_COLOR = 0xFF7A7A7A;
 
         SolidButton(int x, int y, int width, int height, Component label, OnPress onPress) {
             super(x, y, width, height, label, onPress, DEFAULT_NARRATION);
