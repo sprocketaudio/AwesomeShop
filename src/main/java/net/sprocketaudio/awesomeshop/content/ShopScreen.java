@@ -122,16 +122,22 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             int quantityButtonY = priceRowY - Math.max(0, (BUTTON_HEIGHT - font.lineHeight) / 2) - 1;
             int minusX = card.startX() + CARD_PADDING;
             int plusX = card.startX() + CARD_WIDTH - CARD_PADDING - BUTTON_WIDTH;
+            boolean visible = isCardVisible(card);
 
-            addRenderableWidget(createTintedButton(minusX, quantityButtonY, BUTTON_WIDTH, BUTTON_HEIGHT, Component.literal("-"),
-                    b -> adjustQuantity(index, -1)));
+            Button minusButton = createTintedButton(minusX, quantityButtonY, BUTTON_WIDTH, BUTTON_HEIGHT, Component.literal("-"),
+                    b -> adjustQuantity(index, -1));
+            minusButton.visible = visible;
+            addRenderableWidget(minusButton);
 
-            addRenderableWidget(createTintedButton(plusX, quantityButtonY, BUTTON_WIDTH, BUTTON_HEIGHT, Component.literal("+"),
-                    b -> adjustQuantity(index, 1)));
+            Button plusButton = createTintedButton(plusX, quantityButtonY, BUTTON_WIDTH, BUTTON_HEIGHT, Component.literal("+"),
+                    b -> adjustQuantity(index, 1));
+            plusButton.visible = visible;
+            addRenderableWidget(plusButton);
 
             int purchaseY = quantityButtonY + BUTTON_HEIGHT + BUTTON_GAP;
             Button purchaseButton = createTintedButton(card.startX() + CARD_PADDING, purchaseY, CARD_WIDTH - (CARD_PADDING * 2),
                     BUTTON_HEIGHT, Component.literal(""), b -> purchaseOffer(index));
+            purchaseButton.visible = visible;
             purchaseButtons.put(index, addRenderableWidget(purchaseButton));
             updatePurchaseButton(index);
         }
@@ -528,6 +534,14 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             return 0;
         }
         return (requirements.size() * 16) + ((requirements.size() - 1) * CURRENCY_GAP);
+    }
+
+    private boolean isCardVisible(OfferCard card) {
+        int cardTop = card.startY();
+        int cardBottom = cardTop + CARD_HEIGHT;
+        int offersTop = getOffersStartY();
+        int offersBottom = topPos + imageHeight - PADDING;
+        return cardBottom > offersTop && cardTop < offersBottom;
     }
 
     private int calculateCurrencyTotalsWidth(List<ConfiguredCurrency> currencies) {
