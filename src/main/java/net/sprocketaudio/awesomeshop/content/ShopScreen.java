@@ -134,7 +134,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         int startY = getCategoryButtonsStartY();
 
         for (String category : categories) {
-            Button button = createTintedButton(startX, startY, buttonWidth, CATEGORY_BUTTON_HEIGHT, Component.literal(category),
+            Button button = createCategoryButton(startX, startY, buttonWidth, CATEGORY_BUTTON_HEIGHT, category,
                     b -> selectCategory(category));
             categoryButtons.put(category, addRenderableWidget(button));
             startY += CATEGORY_BUTTON_HEIGHT + BUTTON_GAP;
@@ -203,6 +203,10 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
 
     private Button createTintedButton(int x, int y, int width, int height, Component label, Button.OnPress onPress) {
         return new SolidButton(x, y, width, height, label, onPress);
+    }
+
+    private Button createCategoryButton(int x, int y, int width, int height, String category, Button.OnPress onPress) {
+        return new CategoryButton(x, y, width, height, Component.literal(category), onPress, category);
     }
 
     @Override
@@ -502,6 +506,31 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             int textY = getY() + (height - font.lineHeight) / 2;
             int textColor = active ? 0xFFFFFFFF : 0xFFB5B5B5;
             graphics.drawCenteredString(font, getMessage(), getX() + (width / 2), textY, textColor);
+        }
+    }
+
+    private class CategoryButton extends Button {
+        private static final int TEXT_PADDING = 6;
+        private final String categoryId;
+
+        CategoryButton(int x, int y, int width, int height, Component label, OnPress onPress, String categoryId) {
+            super(x, y, width, height, label, onPress, DEFAULT_NARRATION);
+            this.categoryId = categoryId;
+        }
+
+        private boolean isSelected() {
+            return Objects.equals(selectedCategory, categoryId);
+        }
+
+        @Override
+        public void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            int background = isHoveredOrFocused() ? BUTTON_HOVER_COLOR : BUTTON_BASE_COLOR;
+            graphics.fill(getX(), getY(), getX() + width, getY() + height, background);
+
+            int textY = getY() + (height - font.lineHeight) / 2;
+            int textX = getX() + TEXT_PADDING;
+            int textColor = isSelected() ? 0xFFFFFFFF : 0xFFB5B5B5;
+            graphics.drawString(font, getMessage(), textX, textY, textColor);
         }
     }
 
