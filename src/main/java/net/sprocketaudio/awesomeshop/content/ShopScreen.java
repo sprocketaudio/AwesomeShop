@@ -53,7 +53,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         }
         this.selectedCategory = this.categories.get(0);
         this.imageWidth = 360;
-        this.imageHeight = calculateImageHeight();
+        this.imageHeight = 140;
     }
 
     @Override
