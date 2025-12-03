@@ -1,6 +1,7 @@
 package net.sprocketaudio.awesomeshop.content;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +36,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     public ShopScreen(ShopMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
         this.selectedQuantities = new int[menu.getOffers().size()];
+        Arrays.fill(this.selectedQuantities, 1);
         this.imageWidth = 360;
         this.imageHeight = calculateImageHeight();
     }
@@ -82,8 +84,10 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             }
             int buttonId = (quantity * menu.getOffers().size()) + index;
             minecraft.gameMode.handleInventoryButtonClick(menu.containerId, buttonId);
-            selectedQuantities[index] = 0;
-            updatePurchaseButton(index);
+            ConfiguredOffer offer = menu.getOffers().get(index);
+            int maxAffordable = calculateMaxAffordable(offer);
+            selectedQuantities[index] = Math.min(Math.max(1, quantity), maxAffordable);
+            adjustQuantity(index, 0);
         }
     }
 
@@ -95,7 +99,8 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
 
         ConfiguredOffer offer = offers.get(index);
         int maxAffordable = calculateMaxAffordable(offer);
-        int newQuantity = Mth.clamp(selectedQuantities[index] + delta, 0, maxAffordable);
+        int minQuantity = maxAffordable > 0 ? 1 : 0;
+        int newQuantity = Mth.clamp(selectedQuantities[index] + delta, minQuantity, maxAffordable);
         selectedQuantities[index] = newQuantity;
         updatePurchaseButton(index);
     }
@@ -128,6 +133,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics, mouseX, mouseY, partialTick);
         super.render(graphics, mouseX, mouseY, partialTick);
+        renderCurrencyTotals(graphics);
         renderOfferDetails(graphics);
     }
 
@@ -151,22 +157,43 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             for (PriceRequirement requirement : offer.prices()) {
                 ConfiguredCurrency currency = requirement.currency();
                 int currencyX = leftPos + PADDING + 120;
+                int quantity = selectedQuantities[index];
+                int totalPrice = quantity * requirement.price();
 
                 ItemStack currencyStack = new ItemStack(currency.item());
                 graphics.renderItem(currencyStack, currencyX, currencyY);
                 graphics.renderItemDecorations(font, currencyStack, currencyX, currencyY);
 
-                Component eachLine = Component.translatable("screen.awesomeshop.shop_block.price_each_value",
-                        requirement.price());
-                int totalCost = requirement.price() * selectedQuantities[index];
-                Component totalLine = Component.translatable("screen.awesomeshop.shop_block.total_and_stored", totalCost,
-                        menu.getCurrencyCount(currency));
-
-                graphics.drawString(font, eachLine, currencyX + 20, currencyY, 0xAAAAAA);
-                graphics.drawString(font, totalLine, currencyX + 20, currencyY + font.lineHeight + 2, 0xAAAAAA);
+                Component totalLine = Component.literal("x " + totalPrice);
+                graphics.drawString(font, totalLine, currencyX + 20, currencyY, 0xAAAAAA);
 
                 currencyY += getCurrencyLineHeight();
             }
+        }
+    }
+
+    private void renderCurrencyTotals(GuiGraphics graphics) {
+        List<ConfiguredCurrency> currencies = menu.getCurrencies();
+        if (currencies.isEmpty()) {
+            return;
+        }
+
+        int currencyY = PADDING;
+
+        for (ConfiguredCurrency currency : currencies) {
+            ItemStack currencyStack = new ItemStack(currency.item());
+            Component totalLine = Component.literal("x " + menu.getCurrencyCount(currency));
+            int lineWidth = 16 + 4 + font.width(totalLine);
+            int currencyX = leftPos + imageWidth - PADDING - 4 - lineWidth;
+            int textX = currencyX + 16 + 4;
+
+            graphics.renderItem(currencyStack, currencyX, currencyY);
+            graphics.renderItemDecorations(font, currencyStack, currencyX, currencyY);
+
+            int textY = currencyY + Math.max(0, (16 - font.lineHeight) / 2);
+            graphics.drawString(font, totalLine, textX, textY, 0xFFFFFF);
+
+            currencyY += getCurrencyLineHeight();
         }
     }
 
@@ -240,7 +267,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     }
 
     private int getCurrencyLineHeight() {
-        return (font.lineHeight * 2) + 6;
+        return Math.max(font.lineHeight, 16) + 6;
     }
 
     private int calculateMaxAffordable(ConfiguredOffer offer) {
