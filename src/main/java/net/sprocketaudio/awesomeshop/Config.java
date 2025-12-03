@@ -34,6 +34,10 @@ public class Config {
             .defineListAllowEmpty("currencies", List.of("minecraft:emerald", "minecraft:gold_ingot"), () -> "",
                     Config::validateItemName);
 
+    public static final ModConfigSpec.ConfigValue<String> SHOP_NAME = BUILDER
+            .comment("Display name that appears on the shop interface.")
+            .define("shopName", "Awesome Shop");
+
     public static final ModConfigSpec.ConfigValue<List<? extends String>> SHOP_OFFERS = BUILDER
             .comment(
                     "Items that can be purchased from the shop block along with their prices, currencies, and categories.",
@@ -99,6 +103,15 @@ public class Config {
     public static Component offerSummaryMessage(ConfiguredOffer offer) {
         return Component.translatable("block.awesomeshop.shop_block.offer", offer.item().getHoverName(),
                 formatPriceList(offer));
+    }
+
+    public static Component getShopTitle() {
+        String raw = SHOP_NAME.get();
+        String trimmed = raw == null ? "" : raw.trim();
+        if (trimmed.isEmpty()) {
+            return Component.translatable("block.awesomeshop.shop_block");
+        }
+        return Component.literal(trimmed);
     }
 
     public static Component purchaseSuccessMessage(ItemStack offer, int quantity) {

@@ -248,7 +248,7 @@ public class ShopBlockEntity extends BlockEntity implements WorldlyContainer, Me
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("block.awesomeshop.shop_block");
+        return Config.getShopTitle();
     }
 
     @Override
