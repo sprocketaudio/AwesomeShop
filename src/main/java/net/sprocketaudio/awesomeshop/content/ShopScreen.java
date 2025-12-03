@@ -21,7 +21,7 @@ import net.sprocketaudio.awesomeshop.Config.PriceRequirement;
 public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private static final int PADDING = 8;
     private static final int SECTION_TOP = 64;
-    private static final int ROW_GAP = 6;
+    private static final int GRID_GAP = 12;
     private static final int BUTTON_WIDTH = 18;
     private static final int BUTTON_HEIGHT = 14;
     private static final int BUTTON_GAP = 2;
@@ -32,6 +32,14 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private static final int MIN_IMAGE_WIDTH = 320;
     private static final float GUI_WIDTH_RATIO = 0.9f;
     private static final float CATEGORY_COLUMN_RATIO = 0.25f;
+    private static final int CARD_WIDTH = 170;
+    private static final int CARD_HEIGHT = 150;
+    private static final int CARD_PADDING = 8;
+    private static final int CARD_BORDER_COLOR = 0x55FFFFFF;
+    private static final int PANEL_BORDER_COLOR = 0x66FFFFFF;
+    private static final int PANEL_FILL_COLOR = 0x33000000;
+    private static final int CURRENCY_GAP = 10;
+    private static final int ITEM_ICON_SIZE = 24;
 
     private int lockedGuiScale = -1;
     private int originalGuiScale = -1;
@@ -41,7 +49,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private final Map<String, Button> categoryButtons = new HashMap<>();
     private final List<String> categories;
     private String selectedCategory;
-    private List<OfferRow> rows = List.of();
+    private List<OfferCard> cards = List.of();
 
     public ShopScreen(ShopMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
@@ -78,39 +86,36 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             selectedCategory = categories.get(0);
         }
 
-        this.rows = buildRows();
+        this.cards = buildCards();
         this.imageHeight = calculateImageHeight();
         int targetHeight = (int) (this.height * GUI_WIDTH_RATIO);
         this.imageHeight = Math.max(this.imageHeight, targetHeight);
         this.topPos = Math.max(PADDING, (this.height - this.imageHeight) / 2);
-        this.rows = buildRows();
+        this.cards = buildCards();
 
         placeCategoryButtons();
         placeOfferButtons();
     }
 
     private void placeOfferButtons() {
-        int shopLeft = getShopColumnLeft();
-        int shopWidth = getShopColumnWidth();
-
-        for (OfferRow row : rows) {
-            int index = row.offerIndex();
-            int rowY = row.startY();
-            int quantityButtonX = shopLeft + shopWidth - PADDING - PURCHASE_BUTTON_WIDTH - BUTTON_WIDTH - 6;
-            int plusY = rowY + 2;
-            int minusY = plusY + BUTTON_HEIGHT + BUTTON_GAP;
+        for (OfferCard card : cards) {
+            int index = card.offerIndex();
+            int priceRowY = getPriceRowY(card.startY());
+            int quantityButtonY = priceRowY - Math.max(0, (BUTTON_HEIGHT - font.lineHeight) / 2) - 1;
+            int plusX = card.startX() + CARD_PADDING;
+            int minusX = card.startX() + CARD_WIDTH - CARD_PADDING - BUTTON_WIDTH;
 
             addRenderableWidget(Button.builder(Component.literal("+"), b -> adjustQuantity(index, 1))
-                    .bounds(quantityButtonX, plusY, BUTTON_WIDTH, BUTTON_HEIGHT)
+                    .bounds(plusX, quantityButtonY, BUTTON_WIDTH, BUTTON_HEIGHT)
                     .build());
 
             addRenderableWidget(Button.builder(Component.literal("-"), b -> adjustQuantity(index, -1))
-                    .bounds(quantityButtonX, minusY, BUTTON_WIDTH, BUTTON_HEIGHT)
+                    .bounds(minusX, quantityButtonY, BUTTON_WIDTH, BUTTON_HEIGHT)
                     .build());
 
+            int purchaseY = quantityButtonY + BUTTON_HEIGHT + BUTTON_GAP;
             Button purchaseButton = Button.builder(Component.literal(""), b -> purchaseOffer(index))
-                    .bounds(shopLeft + shopWidth - PADDING - PURCHASE_BUTTON_WIDTH, rowY, PURCHASE_BUTTON_WIDTH,
-                            BUTTON_HEIGHT)
+                    .bounds(card.startX() + CARD_PADDING, purchaseY, CARD_WIDTH - (CARD_PADDING * 2), BUTTON_HEIGHT)
                     .build();
             purchaseButtons.put(index, addRenderableWidget(purchaseButton));
             updatePurchaseButton(index);
@@ -199,10 +204,30 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics, mouseX, mouseY, partialTick);
+        renderPanels(graphics);
         super.render(graphics, mouseX, mouseY, partialTick);
         renderCategoryPanel(graphics);
         renderCurrencyTotals(graphics);
         renderOfferDetails(graphics);
+    }
+
+    private void renderPanels(GuiGraphics graphics) {
+        int right = leftPos + imageWidth;
+        int bottom = topPos + imageHeight;
+
+        graphics.fill(leftPos, topPos, right, bottom, PANEL_FILL_COLOR);
+        graphics.fill(leftPos, topPos, right, topPos + 1, PANEL_BORDER_COLOR);
+        graphics.fill(leftPos, bottom - 1, right, bottom, PANEL_BORDER_COLOR);
+        graphics.fill(leftPos, topPos, leftPos + 1, bottom, PANEL_BORDER_COLOR);
+        graphics.fill(right - 1, topPos, right, bottom, PANEL_BORDER_COLOR);
+
+        int categoryRight = leftPos + getCategoryColumnWidth();
+        int categoryBottom = topPos + imageHeight;
+        graphics.fill(leftPos, topPos, categoryRight, categoryBottom, PANEL_FILL_COLOR);
+        graphics.fill(categoryRight - 1, topPos, categoryRight, categoryBottom, PANEL_BORDER_COLOR);
+
+        int dividerX = categoryRight + (COLUMN_GAP / 2);
+        graphics.fill(dividerX, topPos, dividerX + 1, bottom, PANEL_BORDER_COLOR);
     }
 
     private void renderCategoryPanel(GuiGraphics graphics) {
@@ -213,39 +238,54 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
 
     private void renderOfferDetails(GuiGraphics graphics) {
         List<ConfiguredOffer> offers = menu.getOffers();
-        int shopLeft = getShopColumnLeft();
-        int contentLeft = shopLeft + PADDING;
-
-        for (OfferRow row : rows) {
-            int index = row.offerIndex();
+        for (OfferCard card : cards) {
+            int index = card.offerIndex();
             if (index < 0 || index >= offers.size()) {
                 continue;
             }
 
             ConfiguredOffer offer = offers.get(index);
-            int baseY = row.startY();
+            int cardX = card.startX();
+            int cardY = card.startY();
+            int cardCenterX = cardX + (CARD_WIDTH / 2);
+
+            graphics.fill(cardX, cardY, cardX + CARD_WIDTH, cardY + CARD_HEIGHT, PANEL_FILL_COLOR);
+            graphics.fill(cardX, cardY, cardX + CARD_WIDTH, cardY + 1, CARD_BORDER_COLOR);
+            graphics.fill(cardX, cardY + CARD_HEIGHT - 1, cardX + CARD_WIDTH, cardY + CARD_HEIGHT, CARD_BORDER_COLOR);
+            graphics.fill(cardX, cardY, cardX + 1, cardY + CARD_HEIGHT, CARD_BORDER_COLOR);
+            graphics.fill(cardX + CARD_WIDTH - 1, cardY, cardX + CARD_WIDTH, cardY + CARD_HEIGHT, CARD_BORDER_COLOR);
+
             Component itemName = offer.item().getHoverName();
+            int nameY = cardY + CARD_PADDING;
+            graphics.drawCenteredString(font, itemName, cardCenterX, nameY, 0xFFFFFF);
 
-            graphics.renderItem(offer.item(), contentLeft, baseY + 2);
-            graphics.renderItemDecorations(font, offer.item(), contentLeft, baseY + 2);
-            graphics.drawString(font, itemName, contentLeft + 24, baseY + 4, 0xFFFFFF);
+            float iconScale = ITEM_ICON_SIZE / 16f;
+            int iconX = cardCenterX - (int) (ITEM_ICON_SIZE / 2f);
+            int iconY = nameY + font.lineHeight + 2;
+            graphics.pose().pushPose();
+            graphics.pose().translate(iconX, iconY, 0);
+            graphics.pose().scale(iconScale, iconScale, 1.0f);
+            graphics.renderItem(offer.item(), 0, 0);
+            graphics.renderItemDecorations(font, offer.item(), 0, 0);
+            graphics.pose().popPose();
 
-            int currencyY = baseY + font.lineHeight + 6;
-            for (PriceRequirement requirement : offer.prices()) {
-                ConfiguredCurrency currency = requirement.currency();
-                int currencyX = contentLeft + 120;
-                int quantity = selectedQuantities[index];
-                int totalPrice = quantity * requirement.price();
+            int currenciesY = iconY + ITEM_ICON_SIZE + 6;
+            List<PriceRequirement> requirements = offer.prices();
+            int totalCurrencyWidth = calculateCurrencyRowWidth(requirements);
+            int currencyStartX = cardCenterX - (totalCurrencyWidth / 2);
+            int currentX = currencyStartX;
 
-                ItemStack currencyStack = new ItemStack(currency.item());
-                graphics.renderItem(currencyStack, currencyX, currencyY);
-                graphics.renderItemDecorations(font, currencyStack, currencyX, currencyY);
-
-                Component totalLine = Component.literal("x " + totalPrice);
-                graphics.drawString(font, totalLine, currencyX + 20, currencyY, 0xAAAAAA);
-
-                currencyY += getCurrencyLineHeight();
+            for (PriceRequirement requirement : requirements) {
+                ItemStack currencyStack = new ItemStack(requirement.currency().item());
+                graphics.renderItem(currencyStack, currentX, currenciesY);
+                graphics.renderItemDecorations(font, currencyStack, currentX, currenciesY);
+                currentX += 16 + CURRENCY_GAP;
             }
+
+            int quantity = selectedQuantities[index];
+            Component priceLine = buildPriceLine(requirements, quantity);
+            int priceY = getPriceRowY(cardY);
+            graphics.drawCenteredString(font, priceLine, cardCenterX, priceY, 0xDDDDDD);
         }
     }
 
@@ -256,27 +296,28 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         }
 
         int currencyY = topPos + PADDING;
+        int totalWidth = calculateCurrencyTotalsWidth(currencies);
+        int startX = leftPos + imageWidth - PADDING - totalWidth;
+        int currentX = startX;
 
         for (ConfiguredCurrency currency : currencies) {
             ItemStack currencyStack = new ItemStack(currency.item());
             Component totalLine = Component.literal("x " + menu.getCurrencyCount(currency));
             int lineWidth = 16 + 4 + font.width(totalLine);
-            int currencyX = leftPos + imageWidth - PADDING - 4 - lineWidth;
-            int textX = currencyX + 16 + 4;
 
-            graphics.renderItem(currencyStack, currencyX, currencyY);
-            graphics.renderItemDecorations(font, currencyStack, currencyX, currencyY);
+            graphics.renderItem(currencyStack, currentX, currencyY);
+            graphics.renderItemDecorations(font, currencyStack, currentX, currencyY);
 
             int textY = currencyY + Math.max(0, (16 - font.lineHeight) / 2);
-            graphics.drawString(font, totalLine, textX, textY, 0xFFFFFF);
+            graphics.drawString(font, totalLine, currentX + 16 + 4, textY, 0xFFFFFF);
 
-            currencyY += getCurrencyLineHeight();
+            currentX += lineWidth + CURRENCY_GAP;
         }
     }
 
     @Override
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
-        int centerX = getShopColumnLeft() + (getShopColumnWidth() / 2);
+        int centerX = leftPos + (imageWidth / 2);
         int titleY = topPos + PADDING;
         graphics.drawCenteredString(font, title, centerX, titleY, 0xFFFFFF);
     }
@@ -316,12 +357,13 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     }
 
     private int calculateImageHeight() {
-        int height = getOffersStartY() - topPos;
-        for (int i = 0; i < rows.size(); i++) {
-            height += rows.get(i).height();
-            if (i < rows.size() - 1) {
-                height += ROW_GAP;
-            }
+        int offersTop = getOffersStartY();
+        int columns = Math.max(1, getColumns());
+        int rowCount = (int) Math.ceil((double) cards.size() / columns);
+        int height = offersTop - topPos;
+        if (rowCount > 0) {
+            height += rowCount * CARD_HEIGHT;
+            height += (rowCount - 1) * GRID_GAP;
         }
         height += PADDING;
         return Math.max(height, 140);
@@ -349,29 +391,72 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         return Math.max(topPos + SECTION_TOP, categoryBottom + PADDING);
     }
 
-    private List<OfferRow> buildRows() {
-        List<OfferRow> result = new ArrayList<>();
+    private List<OfferCard> buildCards() {
+        List<OfferCard> result = new ArrayList<>();
+        int contentLeft = getShopColumnLeft() + PADDING;
+        int currentX = contentLeft;
         int currentY = getOffersStartY();
+        int columns = Math.max(1, getColumns());
+        int columnIndex = 0;
+
         for (int i = 0; i < menu.getOffers().size(); i++) {
             ConfiguredOffer offer = menu.getOffers().get(i);
             if (!Objects.equals(offer.category(), selectedCategory)) {
                 continue;
             }
-            int height = calculateOfferHeight(offer);
-            result.add(new OfferRow(i, currentY, height));
-            currentY += height + ROW_GAP;
+            result.add(new OfferCard(i, currentX, currentY));
+
+            columnIndex++;
+            if (columnIndex >= columns) {
+                columnIndex = 0;
+                currentX = contentLeft;
+                currentY += CARD_HEIGHT + GRID_GAP;
+            } else {
+                currentX += CARD_WIDTH + GRID_GAP;
+            }
         }
         return result;
     }
 
-    private int calculateOfferHeight(ConfiguredOffer offer) {
-        int lines = Math.max(1, offer.prices().size());
-        int currencyHeight = lines * getCurrencyLineHeight();
-        return Math.max(40, currencyHeight + font.lineHeight + 10);
+    private int calculateCurrencyRowWidth(List<PriceRequirement> requirements) {
+        if (requirements.isEmpty()) {
+            return 0;
+        }
+        return (requirements.size() * 16) + ((requirements.size() - 1) * CURRENCY_GAP);
     }
 
-    private int getCurrencyLineHeight() {
-        return Math.max(font.lineHeight, 16) + 6;
+    private int calculateCurrencyTotalsWidth(List<ConfiguredCurrency> currencies) {
+        int total = 0;
+        for (int i = 0; i < currencies.size(); i++) {
+            ConfiguredCurrency currency = currencies.get(i);
+            Component totalLine = Component.literal("x " + menu.getCurrencyCount(currency));
+            total += 16 + 4 + font.width(totalLine);
+            if (i < currencies.size() - 1) {
+                total += CURRENCY_GAP;
+            }
+        }
+        return total;
+    }
+
+    private Component buildPriceLine(List<PriceRequirement> requirements, int quantity) {
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < requirements.size(); i++) {
+            PriceRequirement requirement = requirements.get(i);
+            builder.append("x ").append(quantity * requirement.price());
+            if (i < requirements.size() - 1) {
+                builder.append("  |  ");
+            }
+        }
+        return Component.literal(builder.toString());
+    }
+
+    private int getColumns() {
+        int contentWidth = getShopColumnWidth() - (PADDING * 2);
+        return Math.max(1, (contentWidth + GRID_GAP) / (CARD_WIDTH + GRID_GAP));
+    }
+
+    private int getPriceRowY(int cardStartY) {
+        return cardStartY + CARD_PADDING + font.lineHeight + 2 + ITEM_ICON_SIZE + 6 + 18;
     }
 
     private int calculateMaxAffordable(ConfiguredOffer offer) {
@@ -390,6 +475,6 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         return Math.max(0, maxAffordable);
     }
 
-    private record OfferRow(int offerIndex, int startY, int height) {
+    private record OfferCard(int offerIndex, int startX, int startY) {
     }
 }
