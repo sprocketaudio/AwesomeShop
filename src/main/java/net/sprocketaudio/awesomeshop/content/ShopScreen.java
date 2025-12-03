@@ -613,10 +613,6 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     }
 
     @Override
-    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
-    }
-
-    @Override
     public void resize(net.minecraft.client.Minecraft minecraft, int width, int height) {
         super.resize(minecraft, width, height);
         lockGuiScale();
