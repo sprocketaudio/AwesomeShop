@@ -808,7 +808,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             int viewportBottom = topPos + imageHeight - PADDING;
 
             graphics.enableScissor(viewportLeft, viewportTop, viewportRight, viewportBottom);
-            boolean hovered = active && isHoveredOrFocused();
+            boolean hovered = active && isMouseOver(mouseX, mouseY);
             int background = !active ? style.cardButtonDisabledBackground()
                     : hovered ? style.cardButtonHoverBackground() : style.cardButtonBackground();
             graphics.fill(getX(), getY(), getX() + width, getY() + height, background);
