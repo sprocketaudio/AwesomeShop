@@ -39,7 +39,8 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private static final int BORDER_THICKNESS = 2;
     private static final int CARD_BORDER_COLOR = 0xAAFFFFFF;
     private static final int PANEL_BORDER_COLOR = 0xCCFFFFFF;
-    private static final int PANEL_FILL_COLOR = 0x33000000;
+    private static final int PANEL_FILL_COLOR = 0xEE0D0D0D;
+    private static final int CARD_FILL_COLOR = 0xEE161616;
     private static final int CURRENCY_GAP = 10;
     private static final int ITEM_ICON_SIZE = 24;
 
@@ -77,6 +78,10 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private void recalculateDimensions() {
         this.imageWidth = Math.max(MIN_IMAGE_WIDTH, (int) (this.width * GUI_WIDTH_RATIO));
         this.leftPos = (this.width - this.imageWidth) / 2;
+    }
+
+    private int getTopRowY() {
+        return topPos + PADDING;
     }
 
     private void rebuildLayout() {
@@ -236,7 +241,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
 
     private void renderCategoryPanel(GuiGraphics graphics) {
         int titleX = leftPos + PADDING;
-        int titleY = topPos + PADDING;
+        int titleY = getTopRowY();
         graphics.drawString(font, Component.literal("Categories"), titleX, titleY, 0xFFFFFF);
     }
 
@@ -253,7 +258,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             int cardY = card.startY();
             int cardCenterX = cardX + (CARD_WIDTH / 2);
 
-            graphics.fill(cardX, cardY, cardX + CARD_WIDTH, cardY + CARD_HEIGHT, PANEL_FILL_COLOR);
+            graphics.fill(cardX, cardY, cardX + CARD_WIDTH, cardY + CARD_HEIGHT, CARD_FILL_COLOR);
             graphics.fill(cardX, cardY, cardX + CARD_WIDTH, cardY + BORDER_THICKNESS, CARD_BORDER_COLOR);
             graphics.fill(cardX, cardY + CARD_HEIGHT - BORDER_THICKNESS, cardX + CARD_WIDTH, cardY + CARD_HEIGHT, CARD_BORDER_COLOR);
             graphics.fill(cardX, cardY, cardX + BORDER_THICKNESS, cardY + CARD_HEIGHT, CARD_BORDER_COLOR);
@@ -299,7 +304,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             return;
         }
 
-        int currencyY = topPos + PADDING;
+        int currencyY = getTopRowY();
         int totalWidth = calculateCurrencyTotalsWidth(currencies);
         int startX = leftPos + imageWidth - PADDING - totalWidth;
         int currentX = startX;
@@ -322,7 +327,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     @Override
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
         int centerX = leftPos + (imageWidth / 2);
-        int titleY = topPos + PADDING;
+        int titleY = getTopRowY();
         graphics.drawCenteredString(font, title, centerX, titleY, 0xFFFFFF);
     }
 
