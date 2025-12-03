@@ -44,7 +44,9 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private static final int PANEL_FILL_COLOR = 0xEE161616;
     private static final int CARD_FILL_COLOR = 0xEE161616;
     private static final int BUTTON_BASE_COLOR = 0xFF6E6E6E;
-    private static final int BUTTON_HOVER_COLOR = 0xFF858585;
+    private static final int BUTTON_HOVER_COLOR = 0xFF9C9C9C;
+    private static final int BUTTON_DISABLED_COLOR = 0xFF3A3A3A;
+    private static final int BUTTON_DISABLED_TEXT_COLOR = 0xFF7A7A7A;
     private static final int CURRENCY_GAP = 8;
     private static final int ITEM_ICON_SIZE = 24;
     private static final int SCROLLBAR_WIDTH = 8;
@@ -56,6 +58,8 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private int originalGuiScale = -1;
 
     private final int[] selectedQuantities;
+    private final Map<Integer, Button> minusButtons = new HashMap<>();
+    private final Map<Integer, Button> plusButtons = new HashMap<>();
     private final Map<Integer, Button> purchaseButtons = new HashMap<>();
     private final List<Button> offerButtons = new ArrayList<>();
     private final Map<String, Button> categoryButtons = new HashMap<>();
@@ -99,6 +103,8 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
 
     private void rebuildLayout() {
         clearWidgets();
+        minusButtons.clear();
+        plusButtons.clear();
         purchaseButtons.clear();
         offerButtons.clear();
         categoryButtons.clear();
@@ -118,6 +124,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
 
         placeCategoryButtons();
         placeOfferButtons();
+        reconcileQuantities();
     }
 
     private void placeOfferButtons() {
@@ -132,11 +139,13 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             Button minusButton = createTintedButton(minusX, quantityButtonY, BUTTON_WIDTH, BUTTON_HEIGHT, Component.literal("-"),
                     b -> adjustQuantity(index, -1));
             minusButton.visible = visible;
+            minusButtons.put(index, minusButton);
             offerButtons.add(addRenderableWidget(minusButton));
 
             Button plusButton = createTintedButton(plusX, quantityButtonY, BUTTON_WIDTH, BUTTON_HEIGHT, Component.literal("+"),
                     b -> adjustQuantity(index, 1));
             plusButton.visible = visible;
+            plusButtons.put(index, plusButton);
             offerButtons.add(addRenderableWidget(plusButton));
 
             int purchaseY = quantityButtonY + BUTTON_HEIGHT + BUTTON_GAP;
@@ -146,7 +155,8 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             Button widget = addRenderableWidget(purchaseButton);
             purchaseButtons.put(index, widget);
             offerButtons.add(widget);
-            updatePurchaseButton(index);
+            int maxAffordable = calculateMaxAffordable(index);
+            updatePurchaseButton(index, maxAffordable);
         }
     }
 
@@ -167,15 +177,17 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private void purchaseOffer(int index) {
         if (minecraft != null && minecraft.gameMode != null) {
             int quantity = selectedQuantities[index];
-            if (quantity <= 0) {
+            int maxAffordable = calculateMaxAffordable(index);
+            if (quantity < 1 || maxAffordable < quantity) {
+                selectedQuantities[index] = Math.max(1, Math.min(quantity, Math.max(1, maxAffordable)));
+                reconcileQuantities();
                 return;
             }
             int buttonId = (quantity * menu.getOffers().size()) + index;
             minecraft.gameMode.handleInventoryButtonClick(menu.containerId, buttonId);
             ConfiguredOffer offer = menu.getOffers().get(index);
-            int maxAffordable = calculateMaxAffordable(offer);
-            selectedQuantities[index] = Math.min(Math.max(1, quantity), maxAffordable);
-            adjustQuantity(index, 0);
+            selectedQuantities[index] = Math.max(1, Math.min(quantity, Math.max(1, maxAffordable)));
+            reconcileQuantities();
         }
     }
 
@@ -185,12 +197,18 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             return;
         }
 
-        ConfiguredOffer offer = offers.get(index);
-        int maxAffordable = calculateMaxAffordable(offer);
-        int minQuantity = maxAffordable > 0 ? 1 : 0;
-        int newQuantity = Mth.clamp(selectedQuantities[index] + delta, minQuantity, maxAffordable);
-        selectedQuantities[index] = newQuantity;
-        updatePurchaseButton(index);
+        int maxAffordable = calculateMaxAffordable(index);
+        if (delta > 0 && maxAffordable < 1) {
+            return;
+        }
+
+        int updated = Math.max(1, selectedQuantities[index] + delta);
+        if (delta > 0) {
+            updated = Math.min(updated, Math.max(1, maxAffordable));
+        }
+
+        selectedQuantities[index] = updated;
+        reconcileQuantities();
     }
 
     private void selectCategory(String category) {
@@ -209,12 +227,10 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     @Override
     public void containerTick() {
         super.containerTick();
-        for (int i = 0; i < selectedQuantities.length; i++) {
-            adjustQuantity(i, 0);
-        }
+        reconcileQuantities();
     }
 
-    private void updatePurchaseButton(int index) {
+    private void updatePurchaseButton(int index, int maxAffordable) {
         if (index < 0 || !purchaseButtons.containsKey(index)) {
             return;
         }
@@ -222,7 +238,28 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         int quantity = selectedQuantities[index];
         ConfiguredOffer offer = menu.getOffers().get(index);
         button.setMessage(Component.translatable("screen.awesomeshop.shop_block.buy", quantity, offer.item().getHoverName()));
-        button.active = quantity > 0;
+        button.active = maxAffordable >= quantity && quantity >= 1;
+    }
+
+    private void reconcileQuantities() {
+        for (int i = 0; i < selectedQuantities.length; i++) {
+            int maxAffordable = calculateMaxAffordable(i);
+            selectedQuantities[i] = Math.max(1, selectedQuantities[i]);
+            updatePurchaseButton(i, maxAffordable);
+            updateQuantityButtons(i, maxAffordable);
+        }
+    }
+
+    private void updateQuantityButtons(int index, int maxAffordable) {
+        Button minusButton = minusButtons.get(index);
+        Button plusButton = plusButtons.get(index);
+        int quantity = index < selectedQuantities.length ? selectedQuantities[index] : 0;
+        if (minusButton != null) {
+            minusButton.active = quantity > 1;
+        }
+        if (plusButton != null) {
+            plusButton.active = quantity < maxAffordable;
+        }
     }
 
     private Button createTintedButton(int x, int y, int width, int height, Component label, Button.OnPress onPress) {
@@ -694,15 +731,28 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         return cardStartY + CARD_PADDING + font.lineHeight + 2 + ITEM_ICON_SIZE + 6 + 18;
     }
 
+    private int calculateMaxAffordable(int offerIndex) {
+        List<ConfiguredOffer> offers = menu.getOffers();
+        if (offerIndex < 0 || offerIndex >= offers.size()) {
+            return 0;
+        }
+
+        return calculateMaxAffordable(offers.get(offerIndex));
+    }
+
     private int calculateMaxAffordable(ConfiguredOffer offer) {
         int maxAffordable = Integer.MAX_VALUE;
-        for (Map.Entry<ConfiguredCurrency, Integer> entry : Config.aggregatePriceRequirements(offer.prices()).entrySet()) {
+        Map<ConfiguredCurrency, Integer> prices = Config.aggregatePriceRequirements(offer.prices());
+        if (prices.isEmpty()) {
+            return 0;
+        }
+        for (Map.Entry<ConfiguredCurrency, Integer> entry : prices.entrySet()) {
             int priceEach = entry.getValue();
             if (priceEach <= 0) {
                 continue;
             }
             int available = menu.getCurrencyCount(entry.getKey());
-            maxAffordable = Math.min(maxAffordable, available / priceEach);
+            maxAffordable = Math.min(maxAffordable, Math.max(0, available) / priceEach);
         }
         if (maxAffordable == Integer.MAX_VALUE) {
             return 0;
@@ -727,10 +777,11 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             int viewportBottom = topPos + imageHeight - PADDING;
 
             graphics.enableScissor(viewportLeft, viewportTop, viewportRight, viewportBottom);
-            int background = isHoveredOrFocused() ? BUTTON_HOVER_COLOR : BUTTON_BASE_COLOR;
+            boolean hovered = active && isHoveredOrFocused();
+            int background = !active ? BUTTON_DISABLED_COLOR : hovered ? BUTTON_HOVER_COLOR : BUTTON_BASE_COLOR;
             graphics.fill(getX(), getY(), getX() + width, getY() + height, background);
             int textY = getY() + (height - font.lineHeight) / 2;
-            int textColor = active ? 0xFFFFFFFF : 0xFFB5B5B5;
+            int textColor = active ? 0xFFFFFFFF : BUTTON_DISABLED_TEXT_COLOR;
             graphics.drawCenteredString(font, getMessage(), getX() + (width / 2), textY, textColor);
             graphics.disableScissor();
         }
