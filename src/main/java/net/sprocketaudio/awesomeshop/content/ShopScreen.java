@@ -48,7 +48,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private static final double SCROLL_SPEED = 12.0d;
     private static final Component INFO_ICON = Component.literal("ⓘ");
     private static final Component AUTOMATION_INFO = Component.literal(
-            "Automation (Hoppers, pipes and belts) must be used to add currency items into this shop.");
+            "Automation (Hoppers, pipes and belts) must be used to add currency");
 
     private int lockedGuiScale = -1;
     private int originalGuiScale = -1;
