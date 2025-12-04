@@ -32,6 +32,8 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private static final int CATEGORY_BUTTON_Y_OFFSET = 18;
     private static final int COLUMN_GAP = 10;
     private static final int MIN_IMAGE_WIDTH = 320;
+    private static final int TITLE_BOX_PADDING = 6;
+    private static final int TITLE_BOX_GAP = 8;
     private static final float GUI_WIDTH_RATIO = 0.8f;
     private static final float GUI_HEIGHT_RATIO = 0.8f;
     private static final float CATEGORY_COLUMN_RATIO = 0.25f;
@@ -92,7 +94,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     }
 
     private int getTopRowY() {
-        return topPos + PADDING + getGuiBorderThickness();
+        return getMainAreaTop() + PADDING + getGuiBorderThickness();
     }
 
     private int getGuiBorderThickness() {
@@ -111,6 +113,47 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         return Math.max(0, style.cardButtonBorderThickness());
     }
 
+    private int getTitleBorderThickness() {
+        return Math.max(0, style.titleBorderThickness());
+    }
+
+    private float getTitleFontScale() {
+        return Mth.clamp(style.titleFontScale(), 0.5f, 3.0f);
+    }
+
+    private float getCategoryTitleScale() {
+        return Mth.clamp(style.categoryTitleFontScale(), 0.5f, 3.0f);
+    }
+
+    private int getTitleFontHeight() {
+        return getScaledFontHeight(getTitleFontScale());
+    }
+
+    private int getCategoryTitleHeight() {
+        return getScaledFontHeight(getCategoryTitleScale());
+    }
+
+    private int getScaledFontHeight(float scale) {
+        return (int) Math.ceil(font.lineHeight * scale);
+    }
+
+    private int getTitleBoxHeight() {
+        int border = getTitleBorderThickness();
+        return (TITLE_BOX_PADDING * 2) + (border * 2) + getTitleFontHeight();
+    }
+
+    private int getMainAreaTop() {
+        return topPos + getTitleBoxHeight() + TITLE_BOX_GAP;
+    }
+
+    private int getMainAreaHeight() {
+        return Math.max(0, imageHeight - getTitleBoxHeight() - TITLE_BOX_GAP);
+    }
+
+    private int getMainAreaBottom() {
+        return getMainAreaTop() + getMainAreaHeight();
+    }
+
     private void rebuildLayout() {
         clearWidgets();
         minusButtons.clear();
@@ -124,9 +167,8 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         }
 
         int contentHeight = calculateContentHeight();
-        int maxHeight = this.height - (PADDING * 2);
-        int targetHeight = (int) (this.height * GUI_HEIGHT_RATIO);
-        this.imageHeight = Mth.clamp(targetHeight, 140, maxHeight);
+        int mainAreaHeight = calculateMainAreaHeight();
+        this.imageHeight = getTitleBoxHeight() + TITLE_BOX_GAP + mainAreaHeight;
         this.topPos = Math.max(PADDING, (this.height - this.imageHeight) / 2);
         updateScrollBounds(contentHeight);
         updateCategoryScrollBounds();
@@ -172,7 +214,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
 
     private void placeCategoryButtons() {
         int buttonWidth = getCategoryButtonWidth();
-        int startX = leftPos + PADDING;
+        int startX = leftPos + ((getCategoryColumnWidth() - buttonWidth) / 2);
         int startY = getCategoryButtonsStartY() - (int) categoryScrollOffset;
 
         for (String category : categories) {
@@ -286,6 +328,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        renderTitleBox(graphics);
         renderPanels(graphics);
         renderOfferDetails(graphics);
         renderScrollbar(graphics);
@@ -302,20 +345,21 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     }
 
     private void renderPanels(GuiGraphics graphics) {
+        int mainTop = getMainAreaTop();
+        int mainBottom = getMainAreaBottom();
         int right = leftPos + imageWidth;
-        int bottom = topPos + imageHeight;
         int categoryRight = leftPos + getCategoryColumnWidth();
         int borderThickness = getGuiBorderThickness();
         int innerLeft = leftPos + borderThickness;
-        int innerTop = topPos + borderThickness;
+        int innerTop = mainTop + borderThickness;
         int innerRight = right - borderThickness;
-        int innerBottom = bottom - borderThickness;
+        int innerBottom = mainBottom - borderThickness;
 
         // Panel frame
-        graphics.fill(leftPos, topPos, right, topPos + borderThickness, style.guiBorderColor());
-        graphics.fill(leftPos, bottom - borderThickness, right, bottom, style.guiBorderColor());
-        graphics.fill(leftPos, topPos, leftPos + borderThickness, bottom, style.guiBorderColor());
-        graphics.fill(right - borderThickness, topPos, right, bottom, style.guiBorderColor());
+        graphics.fill(leftPos, mainTop, right, mainTop + borderThickness, style.guiBorderColor());
+        graphics.fill(leftPos, mainBottom - borderThickness, right, mainBottom, style.guiBorderColor());
+        graphics.fill(leftPos, mainTop, leftPos + borderThickness, mainBottom, style.guiBorderColor());
+        graphics.fill(right - borderThickness, mainTop, right, mainBottom, style.guiBorderColor());
 
         int dividerX = Math.min(right - borderThickness, categoryRight + (COLUMN_GAP / 2));
 
@@ -333,7 +377,8 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private void renderCategoryPanel(GuiGraphics graphics) {
         int titleX = leftPos + PADDING;
         int titleY = getTopRowY();
-        graphics.drawString(font, Component.literal("Categories"), titleX, titleY, style.categoryTitleTextColor());
+        drawScaledString(graphics, Component.literal("Categories"), titleX, titleY, getCategoryTitleScale(),
+                style.categoryTitleTextColor());
     }
 
     private void renderScrollbar(GuiGraphics graphics) {
@@ -349,7 +394,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
 
         int barX = leftPos + imageWidth - PADDING - SCROLLBAR_WIDTH;
         int barTop = getOffersStartY();
-        int barBottom = topPos + imageHeight - PADDING;
+        int barBottom = getMainAreaBottom() - PADDING;
         int trackHeight = barBottom - barTop;
 
         graphics.fill(barX, barTop, barX + SCROLLBAR_WIDTH, barBottom, 0x66000000);
@@ -375,7 +420,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
 
         int barX = leftPos + getCategoryColumnWidth() - PADDING - SCROLLBAR_WIDTH;
         int barTop = getCategoryButtonsStartY();
-        int barBottom = topPos + imageHeight - PADDING;
+        int barBottom = getMainAreaBottom() - PADDING;
         int trackHeight = barBottom - barTop;
 
         graphics.fill(barX, barTop, barX + SCROLLBAR_WIDTH, barBottom, 0x66000000);
@@ -390,7 +435,8 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
 
     private void renderOfferDetails(GuiGraphics graphics) {
         if (maxScroll > 0) {
-            graphics.enableScissor(getShopColumnLeft(), getOffersStartY(), leftPos + imageWidth - PADDING, topPos + imageHeight - PADDING);
+            graphics.enableScissor(getShopColumnLeft(), getOffersStartY(), leftPos + imageWidth - PADDING,
+                    getMainAreaBottom() - PADDING);
         }
 
         List<ConfiguredOffer> offers = menu.getOffers();
@@ -513,21 +559,55 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
 
     private int getVisibleOffersHeight() {
         int offersTop = getOffersStartY();
-        int offersBottom = topPos + imageHeight - PADDING;
+        int offersBottom = getMainAreaBottom() - PADDING;
         return Math.max(0, offersBottom - offersTop);
     }
 
     private int getVisibleCategoryHeight() {
         int categoryTop = getCategoryButtonsStartY();
-        int categoryBottom = topPos + imageHeight - PADDING;
+        int categoryBottom = getMainAreaBottom() - PADDING;
         return Math.max(0, categoryBottom - categoryTop);
     }
 
     @Override
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
-        int centerX = imageWidth / 2;
-        int titleY = getTopRowY() - topPos;
-        graphics.drawCenteredString(font, title, centerX, titleY, 0xFFFFFF);
+    }
+
+    private void renderTitleBox(GuiGraphics graphics) {
+        int boxTop = topPos;
+        int boxBottom = boxTop + getTitleBoxHeight();
+        int boxLeft = leftPos;
+        int boxRight = leftPos + imageWidth;
+
+        graphics.fill(boxLeft, boxTop, boxRight, boxBottom, style.titleBackgroundColor());
+
+        int borderThickness = getTitleBorderThickness();
+        if (borderThickness > 0) {
+            graphics.fill(boxLeft, boxTop, boxRight, boxTop + borderThickness, style.titleBorderColor());
+            graphics.fill(boxLeft, boxBottom - borderThickness, boxRight, boxBottom, style.titleBorderColor());
+            graphics.fill(boxLeft, boxTop, boxLeft + borderThickness, boxBottom, style.titleBorderColor());
+            graphics.fill(boxRight - borderThickness, boxTop, boxRight, boxBottom, style.titleBorderColor());
+        }
+
+        int textY = boxTop + ((getTitleBoxHeight() - getTitleFontHeight()) / 2);
+        int centerX = boxLeft + (imageWidth / 2);
+        drawScaledCenteredString(graphics, title, centerX, textY, getTitleFontScale(), style.titleTextColor());
+    }
+
+    private void drawScaledCenteredString(GuiGraphics graphics, Component text, int centerX, int y, float scale, int color) {
+        graphics.pose().pushPose();
+        graphics.pose().translate(centerX, y, 0);
+        graphics.pose().scale(scale, scale, 1.0f);
+        graphics.drawCenteredString(font, text, 0, 0, color);
+        graphics.pose().popPose();
+    }
+
+    private void drawScaledString(GuiGraphics graphics, Component text, int x, int y, float scale, int color) {
+        graphics.pose().pushPose();
+        graphics.pose().translate(x, y, 0);
+        graphics.pose().scale(scale, scale, 1.0f);
+        graphics.drawString(font, text, 0, 0, color);
+        graphics.pose().popPose();
     }
 
     @Override
@@ -564,18 +644,14 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         lockedGuiScale = -1;
     }
 
-    private int calculateImageHeight() {
-        return calculateImageHeight(calculateContentHeight());
-    }
-
-    private int calculateImageHeight(int contentHeight) {
-        int headerHeight = PADDING + font.lineHeight + CATEGORY_TITLE_GAP + CATEGORY_BUTTON_Y_OFFSET;
-        int height = headerHeight + contentHeight + PADDING;
-        return Math.max(height, 140);
+    private int calculateMainAreaHeight() {
+        int availableHeight = Math.max(0, this.height - (PADDING * 2) - getTitleBoxHeight() - TITLE_BOX_GAP);
+        int desiredHeight = Math.max(140, (int) (this.height * GUI_HEIGHT_RATIO));
+        return Math.min(desiredHeight, availableHeight);
     }
 
     private int getCategoryButtonsStartY() {
-        return topPos + PADDING + font.lineHeight + CATEGORY_TITLE_GAP + CATEGORY_BUTTON_Y_OFFSET;
+        return getTopRowY() + getCategoryTitleHeight() + CATEGORY_TITLE_GAP + CATEGORY_BUTTON_Y_OFFSET;
     }
 
     private int getCategoryColumnWidth() {
@@ -675,7 +751,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         int cardTop = card.startY();
         int cardBottom = cardTop + CARD_HEIGHT;
         int offersTop = getOffersStartY();
-        int offersBottom = topPos + imageHeight - PADDING;
+        int offersBottom = getMainAreaBottom() - PADDING;
         return cardBottom > offersTop && cardTop < offersBottom;
     }
 
@@ -699,7 +775,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         int viewportLeft = getShopColumnLeft();
         int viewportRight = leftPos + imageWidth - PADDING;
         int viewportTop = getOffersStartY();
-        int viewportBottom = topPos + imageHeight - PADDING;
+        int viewportBottom = getMainAreaBottom() - PADDING;
 
         int right = x + width;
         int bottom = y + height;
@@ -714,7 +790,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         int viewportLeft = leftPos + PADDING;
         int viewportRight = leftPos + getCategoryColumnWidth() - PADDING;
         int viewportTop = getCategoryButtonsStartY();
-        int viewportBottom = topPos + imageHeight - PADDING;
+        int viewportBottom = getMainAreaBottom() - PADDING;
 
         int right = x + width;
         int bottom = y + height;
@@ -724,8 +800,8 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private boolean isWithinCategoryColumn(double mouseX, double mouseY) {
         int columnLeft = leftPos;
         int columnRight = leftPos + getCategoryColumnWidth();
-        int columnTop = topPos;
-        int columnBottom = topPos + imageHeight;
+        int columnTop = getMainAreaTop();
+        int columnBottom = getMainAreaBottom();
         return mouseX >= columnLeft && mouseX <= columnRight && mouseY >= columnTop && mouseY <= columnBottom;
     }
 
@@ -805,7 +881,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             int viewportLeft = getShopColumnLeft();
             int viewportRight = leftPos + imageWidth - PADDING;
             int viewportTop = getOffersStartY();
-            int viewportBottom = topPos + imageHeight - PADDING;
+            int viewportBottom = getMainAreaBottom() - PADDING;
 
             graphics.enableScissor(viewportLeft, viewportTop, viewportRight, viewportBottom);
             boolean hovered = active && isMouseOver(mouseX, mouseY);
@@ -851,7 +927,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
             int viewportLeft = leftPos + PADDING;
             int viewportRight = leftPos + getCategoryColumnWidth() - PADDING;
             int viewportTop = getCategoryButtonsStartY();
-            int viewportBottom = topPos + imageHeight - PADDING;
+            int viewportBottom = getMainAreaBottom() - PADDING;
 
             graphics.enableScissor(viewportLeft, viewportTop, viewportRight, viewportBottom);
             boolean hovered = isHoveredOrFocused();
