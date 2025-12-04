@@ -47,8 +47,8 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private static final int MIN_SCROLLBAR_HEIGHT = 12;
     private static final double SCROLL_SPEED = 12.0d;
     private static final Component INFO_ICON = Component.literal("ⓘ");
-    private static final Component AUTOMATION_INFO = Component.literal(
-            "Automation (Hoppers, pipes and belts) must be used to add currency");
+    private static final Component AUTOMATION_INFO = Component.translatable(
+            "screen.awesomeshop.shop_block.automation_info");
 
     private int lockedGuiScale = -1;
     private int originalGuiScale = -1;
