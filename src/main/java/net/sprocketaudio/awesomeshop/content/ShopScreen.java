@@ -46,6 +46,9 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
     private static final int SCROLLBAR_MARGIN = 6;
     private static final int MIN_SCROLLBAR_HEIGHT = 12;
     private static final double SCROLL_SPEED = 12.0d;
+    private static final Component INFO_ICON = Component.literal("ⓘ");
+    private static final Component AUTOMATION_INFO = Component.literal(
+            "Automation (Hoppers, pipes and belts) must be used to add currency items into this shop.");
 
     private int lockedGuiScale = -1;
     private int originalGuiScale = -1;
@@ -338,6 +341,7 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         super.render(graphics, mouseX, mouseY, partialTick);
         renderCategoryPanel(graphics);
         renderCurrencyTotals(graphics);
+        renderInfoIcon(graphics, mouseX, mouseY);
     }
 
     @Override
@@ -592,6 +596,32 @@ public class ShopScreen extends AbstractContainerScreen<ShopMenu> {
         int textY = boxTop + ((getTitleBoxHeight() - getTitleFontHeight()) / 2);
         int centerX = boxLeft + (imageWidth / 2);
         drawScaledCenteredString(graphics, title, centerX, textY, getTitleFontScale(), style.titleTextColor());
+    }
+
+    private void renderInfoIcon(GuiGraphics graphics, int mouseX, int mouseY) {
+        float scale = getTitleFontScale();
+        int iconWidth = (int) Math.ceil(font.width(INFO_ICON) * scale);
+        int iconHeight = getTitleFontHeight();
+        int iconX = leftPos + imageWidth - PADDING - iconWidth;
+        int iconY = topPos + ((getTitleBoxHeight() - iconHeight) / 2);
+
+        graphics.pose().pushPose();
+        graphics.pose().translate(iconX, iconY, 0);
+        graphics.pose().scale(scale, scale, 1.0f);
+        graphics.drawString(font, INFO_ICON, 0, 0, style.titleTextColor());
+        graphics.pose().popPose();
+
+        if (isHoveringInfoIcon(mouseX, mouseY, iconX, iconY, iconWidth, iconHeight)) {
+            renderAutomationInfo(graphics, mouseX, mouseY);
+        }
+    }
+
+    private void renderAutomationInfo(GuiGraphics graphics, int mouseX, int mouseY) {
+        graphics.renderTooltip(font, AUTOMATION_INFO, mouseX, mouseY);
+    }
+
+    private boolean isHoveringInfoIcon(int mouseX, int mouseY, int iconX, int iconY, int iconWidth, int iconHeight) {
+        return mouseX >= iconX && mouseX <= iconX + iconWidth && mouseY >= iconY && mouseY <= iconY + iconHeight;
     }
 
     private void drawScaledCenteredString(GuiGraphics graphics, Component text, int centerX, int y, float scale, int color) {
